@@ -1,4 +1,9 @@
 approvers:
-  - menglingwei
-reviewers:
-  - menglingwei
+  - JoelSpeed
+  - elmiko
+  - alexander-demichev
+  - lobziik
+  - Fedosin
+
+component: "Cloud Compute"
+subcomponent: "Other Providers"
