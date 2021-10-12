@@ -118,10 +118,11 @@ func (r *Reconciler) reconcile(machineSet *machinev1.MachineSet) (ctrl.Result, e
 	if err != nil {
 		return ctrl.Result{}, mapierrors.InvalidMachineConfiguration("failed to get providerConfig: %v", err)
 	}
-	instanceType, ok := InstanceTypes[providerConfig.InstanceType]
+
+	instanceType, ok := r.getInstanceType(machineSet, providerConfig)
 	if !ok {
-		klog.Error("Unable to set scale from zero annotations: unknown instance type: %s", providerConfig.InstanceType)
-		klog.Error("Autoscaling from zero will not work. To fix this, manually populate machine annotations for your instance type: %v", []string{cpuKey, memoryKey, gpuKey})
+		klog.Errorf("Unable to set scale from zero annotations: unknown instance type: %s", providerConfig.InstanceType)
+		klog.Errorf("Autoscaling from zero will not work. To fix this, manually populate machine annotations for your instance type: %v", []string{cpuKey, memoryKey, gpuKey})
 
 		// Returning no error to prevent further reconciliation, as user intervention is now required but emit an informational event
 		r.recorder.Eventf(machineSet, corev1.EventTypeWarning, "FailedUpdate", "Failed to set autoscaling from zero annotations, instance type unknown")
