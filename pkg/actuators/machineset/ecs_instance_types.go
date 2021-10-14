@@ -14,6 +14,8 @@ limitations under the License.
 package machineset
 
 import (
+	"fmt"
+
 	alibabacloudproviderv1 "github.com/AliyunContainerService/cluster-api-provider-alibabacloud/pkg/apis/alibabacloudprovider/v1beta1"
 	alibabacloudClient "github.com/AliyunContainerService/cluster-api-provider-alibabacloud/pkg/client"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
@@ -29,7 +31,7 @@ type instanceType struct {
 }
 
 // Check whether instanceType is correct, and return the corresponding CPU, MEM, and GPU data
-func (r *Reconciler) getInstanceType(machineSet *machinev1.MachineSet, providerSpec *alibabacloudproviderv1.AlibabaCloudMachineProviderConfig) (*instanceType, bool) {
+func (r *Reconciler) getInstanceType(machineSet *machinev1.MachineSet, providerSpec *alibabacloudproviderv1.AlibabaCloudMachineProviderConfig) (*instanceType, error) {
 	credentialsSecretName := ""
 	if providerSpec.CredentialsSecret != nil {
 		credentialsSecretName = providerSpec.CredentialsSecret.Name
@@ -38,7 +40,7 @@ func (r *Reconciler) getInstanceType(machineSet *machinev1.MachineSet, providerS
 	aliClient, err := alibabacloudClient.NewClient(r.Client, credentialsSecretName, machineSet.Namespace, providerSpec.RegionID, nil)
 	if err != nil {
 		klog.Errorf("Failed to create alibabacloud client: %v", err)
-		return nil, false
+		return nil, err
 	}
 
 	instanceTypes := []string{providerSpec.InstanceType}
@@ -50,12 +52,12 @@ func (r *Reconciler) getInstanceType(machineSet *machinev1.MachineSet, providerS
 	response, err := aliClient.DescribeInstanceTypes(describeInstanceTypesRequest)
 	if err != nil {
 		klog.Errorf("Failed to describeInstanceTypes: %v", err)
-		return nil, false
+		return nil, err
 	}
 
 	if len(response.InstanceTypes.InstanceType) <= 0 {
 		klog.Errorf("%s no instanceType for given filters not found", providerSpec.InstanceType)
-		return nil, false
+		return nil, fmt.Errorf("%s no instanceType for given filters not found ", providerSpec.InstanceType)
 	}
 
 	it := response.InstanceTypes.InstanceType[0]
@@ -65,5 +67,5 @@ func (r *Reconciler) getInstanceType(machineSet *machinev1.MachineSet, providerS
 		VCPU:         int64(it.CpuCoreCount),
 		MemoryMb:     int64(it.MemorySize * 1024),
 		GPU:          int64(it.GPUAmount),
-	}, true
+	}, nil
 }
