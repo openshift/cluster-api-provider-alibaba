@@ -54,6 +54,7 @@ type AlibabaCloudMachineProviderStatus struct {
 
 	// Conditions is a set of conditions associated with the Machine to indicate
 	// errors or other status
+	// +optional
 	Conditions []AlibabaCloudMachineProviderCondition `json:"conditions,omitempty"`
 }
 
