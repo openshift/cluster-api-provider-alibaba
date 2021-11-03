@@ -309,11 +309,7 @@ func (r *Reconciler) setProviderID(instance *ecs.Instance) error {
 		return nil
 	}
 
-	providerID := fmt.Sprintf("alibabacloud:///%s/%s/%s", instance.RegionId, instance.ZoneId, instance.InstanceId)
-	// If resourceGroupId is not empty, set to providerId
-	if instance.ResourceGroupId != "" {
-		providerID = fmt.Sprintf("alibabacloud:///%s/%s/%s/%s", instance.ResourceGroupId, instance.RegionId, instance.ZoneId, instance.InstanceId)
-	}
+	providerID := fmt.Sprintf("alicloud://%s.%s", instance.RegionId, instance.InstanceId)
 
 	if existingProviderID != nil && *existingProviderID == providerID {
 		klog.Infof("%s: ProviderID already set in the machine Spec with value:%s", r.machine.Name, *existingProviderID)
