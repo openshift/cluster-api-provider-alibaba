@@ -187,6 +187,11 @@ func (s *machineScope) getNetworkAddress(instance *ecs.Instance) ([]corev1.NodeA
 
 	networkAddresses = append(networkAddresses, addresses...)
 
+	networkAddresses = append(networkAddresses, corev1.NodeAddress{
+		Type:    corev1.NodeInternalDNS,
+		Address: s.machine.GetName(),
+	})
+
 	klog.Infof("%s: finished calculating alibabacloud status", s.machine.Name)
 
 	return networkAddresses, nil

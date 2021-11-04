@@ -134,14 +134,10 @@ func runInstances(machine *machinev1.Machine, machineProviderConfig *alibabaclou
 	runInstancesRequest.InstanceType = machineProviderConfig.InstanceType
 
 	// InstanceName
-	if machineProviderConfig.InstanceName != "" {
-		runInstancesRequest.InstanceName = machineProviderConfig.InstanceName
-	}
+	runInstancesRequest.InstanceName = machine.GetName()
 
 	// HostName
-	if machineProviderConfig.HostName != "" {
-		runInstancesRequest.HostName = machineProviderConfig.HostName
-	}
+	runInstancesRequest.HostName = machine.GetName()
 
 	// Amount
 	runInstancesRequest.Amount = requests.NewInteger(1)
@@ -575,7 +571,6 @@ func getInstanceByID(instanceID string, regionID string, client alibabacloudClie
 	if err != nil {
 		return nil, err
 	}
-
 	if len(instances) != 1 {
 		return nil, fmt.Errorf("found %d instances for instance-id %s", len(instances), instanceID)
 	}
@@ -649,7 +644,6 @@ func getInstances(machine *machinev1.Machine, regionID string, client alibabaclo
 	describeInstancesTags := []ecs.DescribeInstancesTag{
 		{Key: clusterFilterKeyPrefix + clusterID, Value: clusterFilterValue},
 		{Key: clusterFilterName, Value: machine.Name},
-		{Key: clusterOwnedKey, Value: clusterOwnedValue},
 	}
 
 	request.Tag = &describeInstancesTags
