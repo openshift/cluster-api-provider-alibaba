@@ -17,7 +17,7 @@ limitations under the License.
 // Package v1beta1 contains API Schema definitions for the alibabacloudmachineproviderconfig v1beta1 API group
 // +k8s:openapi-gen=true
 // +k8s:deepcopy-gen=package,register
-// +k8s:conversion-gen=sigs.k8s.io/cluster-api-provider-alibabacloud/pkg/apis/alibabacloudmachineproviderconfig
+// +k8s:conversion-gen=github.com/openshift/cluster-api-provider-alibaba/pkg/apis/alibabacloudmachineproviderconfig
 // +k8s:defaulter-gen=TypeMeta
 // +groupName=alibabacloudmachineproviderconfig.openshift.io
 package v1beta1

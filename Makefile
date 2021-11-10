@@ -29,7 +29,7 @@ GOARCH  ?= $(shell go env GOARCH)
 GOOS    ?= $(shell go env GOOS)
 
 VERSION     ?= $(shell git describe --tags --abbrev=7)
-REPO_PATH   ?= github.com/AliyunContainerService/cluster-api-provider-alibabacloud
+REPO_PATH   ?= github.com/openshift/cluster-api-provider-alibaba
 LD_FLAGS    ?= -X $(REPO_PATH)/pkg/version.Raw=$(VERSION) $(shell hack/version.sh)  -extldflags "-static"
 MUTABLE_TAG ?= latest
 IMAGE        = origin-alibabacloud-machine-controllers
@@ -60,7 +60,7 @@ ifeq ($(NO_DOCKER), 1)
   DOCKER_CMD =
   IMAGE_BUILD_CMD = imagebuilder
 else
-  DOCKER_CMD = $(ENGINE) run --rm -e CGO_ENABLED=$(CGO_ENABLED) -e GOARCH=$(GOARCH) -e GOOS=$(GOOS) -v "$(PWD)":/go/src/github.com/AliyunContainerService/cluster-api-provider-alibabacloud:Z -w /go/src/github.com/AliyunContainerService/cluster-api-provider-alibabacloud openshift/origin-release:golang-1.16
+  DOCKER_CMD = $(ENGINE) run --rm -e CGO_ENABLED=$(CGO_ENABLED) -e GOARCH=$(GOARCH) -e GOOS=$(GOOS) -v "$(PWD)":/go/src/github.com/openshift/cluster-api-provider-alibaba:Z -w /go/src/github.com/openshift/cluster-api-provider-alibaba openshift/origin-release:golang-1.16
   IMAGE_BUILD_CMD = $(ENGINE) build
 endif
 
@@ -123,7 +123,7 @@ test-e2e: ## Run e2e tests
 
 .PHONY: lint
 lint: ## Go lint your code
-	$(DOCKER_CMD) hack/go-lint.sh -min_confidence 0.3 $$(go list -f '{{ .ImportPath }}' ./... | grep -v -e 'github.com/AliyunContainerService/cluster-api-provider-alibabacloud/test' -e 'github.com/AliyunContainerService/cluster-api-provider-alibabacloud/pkg/cloud/alibabacloud/client/mock')
+	$(DOCKER_CMD) hack/go-lint.sh -min_confidence 0.3 $$(go list -f '{{ .ImportPath }}' ./... | grep -v -e 'github.com/openshift/cluster-api-provider-alibaba/test' -e 'github.com/openshift/cluster-api-provider-alibaba/pkg/cloud/alibabacloud/client/mock')
 
 .PHONY: fmt
 fmt: ## Go fmt your code

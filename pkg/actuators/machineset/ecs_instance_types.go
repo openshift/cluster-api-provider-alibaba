@@ -16,9 +16,9 @@ package machineset
 import (
 	"fmt"
 
-	alibabacloudproviderv1 "github.com/AliyunContainerService/cluster-api-provider-alibabacloud/pkg/apis/alibabacloudprovider/v1beta1"
-	alibabacloudClient "github.com/AliyunContainerService/cluster-api-provider-alibabacloud/pkg/client"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
+	alibabacloudproviderv1 "github.com/openshift/cluster-api-provider-alibaba/pkg/apis/alibabacloudprovider/v1beta1"
+	alibabacloudClient "github.com/openshift/cluster-api-provider-alibaba/pkg/client"
 	machinev1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	"k8s.io/klog"
 )

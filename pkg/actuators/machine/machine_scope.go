@@ -24,12 +24,12 @@ import (
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
 
-	alibabacloudproviderv1 "github.com/AliyunContainerService/cluster-api-provider-alibabacloud/pkg/apis/alibabacloudprovider/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog"
 
-	v1beta1 "github.com/AliyunContainerService/cluster-api-provider-alibabacloud/pkg/apis/alibabacloudprovider/v1beta1"
-	alibabacloudClient "github.com/AliyunContainerService/cluster-api-provider-alibabacloud/pkg/client"
+	alibabacloudClient "github.com/openshift/cluster-api-provider-alibaba/pkg/client"
+
+	v1beta1 "github.com/openshift/cluster-api-provider-alibaba/pkg/apis/alibabacloudprovider/v1beta1"
 	machinev1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	machineapierros "github.com/openshift/machine-api-operator/pkg/controller/machine"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -100,7 +100,7 @@ func newMachineScope(params machineScopeParams) (*machineScope, error) {
 func (s *machineScope) patchMachine() error {
 	klog.V(3).Infof("%v: patching machine", s.machine.GetName())
 
-	providerStatus, err := alibabacloudproviderv1.RawExtensionFromProviderStatus(s.providerStatus)
+	providerStatus, err := v1beta1.RawExtensionFromProviderStatus(s.providerStatus)
 	if err != nil {
 		return machineapierros.InvalidMachineConfiguration("failed to get machine provider status: %v", err)
 	}
@@ -151,7 +151,7 @@ func (s *machineScope) getUserData() (string, error) {
 	return base64.StdEncoding.EncodeToString(userData), nil
 }
 
-func (s *machineScope) setProviderStatus(instance *ecs.Instance, condition alibabacloudproviderv1.AlibabaCloudMachineProviderCondition) error {
+func (s *machineScope) setProviderStatus(instance *ecs.Instance, condition v1beta1.AlibabaCloudMachineProviderCondition) error {
 	klog.Infof("%s: Updating status", s.machine.Name)
 
 	// assign value to providerStatus
