@@ -13,6 +13,16 @@ limitations under the License.
 
 package machineset
 
+import (
+	"fmt"
+
+	alibabacloudproviderv1 "github.com/AliyunContainerService/cluster-api-provider-alibabacloud/pkg/apis/alibabacloudprovider/v1beta1"
+	alibabacloudClient "github.com/AliyunContainerService/cluster-api-provider-alibabacloud/pkg/client"
+	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
+	machinev1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
+	"k8s.io/klog"
+)
+
 type instanceType struct {
 	InstanceType string
 	VCPU         int64
@@ -20,13 +30,42 @@ type instanceType struct {
 	GPU          int64
 }
 
-// InstanceTypes is a map of ecs resources
-// TODO next version will be supported
-var InstanceTypes = map[string]*instanceType{
-	"ecs.c6.2xlarge": {
-		InstanceType: "ecs.c6.2xlarge",
-		VCPU:         8,
-		MemoryMb:     16384,
-		GPU:          0,
-	},
+// Check whether instanceType is correct, and return the corresponding CPU, MEM, and GPU data
+func (r *Reconciler) getInstanceType(machineSet *machinev1.MachineSet, providerSpec *alibabacloudproviderv1.AlibabaCloudMachineProviderConfig) (*instanceType, error) {
+	credentialsSecretName := ""
+	if providerSpec.CredentialsSecret != nil {
+		credentialsSecretName = providerSpec.CredentialsSecret.Name
+	}
+
+	aliClient, err := alibabacloudClient.NewClient(r.Client, credentialsSecretName, machineSet.Namespace, providerSpec.RegionID, nil)
+	if err != nil {
+		klog.Errorf("Failed to create alibabacloud client: %v", err)
+		return nil, err
+	}
+
+	instanceTypes := []string{providerSpec.InstanceType}
+	describeInstanceTypesRequest := ecs.CreateDescribeInstanceTypesRequest()
+	describeInstanceTypesRequest.RegionId = providerSpec.RegionID
+	describeInstanceTypesRequest.Scheme = "https"
+	describeInstanceTypesRequest.InstanceTypes = &instanceTypes
+
+	response, err := aliClient.DescribeInstanceTypes(describeInstanceTypesRequest)
+	if err != nil {
+		klog.Errorf("Failed to describeInstanceTypes: %v", err)
+		return nil, err
+	}
+
+	if len(response.InstanceTypes.InstanceType) <= 0 {
+		klog.Errorf("%s no instanceType for given filters not found", providerSpec.InstanceType)
+		return nil, fmt.Errorf("%s no instanceType for given filters not found ", providerSpec.InstanceType)
+	}
+
+	it := response.InstanceTypes.InstanceType[0]
+
+	return &instanceType{
+		InstanceType: it.InstanceType,
+		VCPU:         int64(it.CpuCoreCount),
+		MemoryMb:     int64(it.MemorySize * 1024),
+		GPU:          int64(it.GPUAmount),
+	}, nil
 }
