@@ -43,14 +43,14 @@ const (
 	// EcsImageStatusAvailable Image status
 	EcsImageStatusAvailable = "Available"
 
-	// MaxInstanceOfSecurityGroupTypeNoraml A basic security group can contain a maximum of 2,000 instances.
-	MaxInstanceOfSecurityGroupTypeNoraml = 2000
+	// MaxInstanceOfSecurityGroupTypeNormal A basic security group can contain a maximum of 2,000 instances.
+	MaxInstanceOfSecurityGroupTypeNormal = 2000
 
 	// MaxInstanceOfSecurityGroupTypeEnterprise An advanced security group can contain a maximum of 65,536 instances.
 	MaxInstanceOfSecurityGroupTypeEnterprise = 65536
 
-	// SecurityGroupTypeNoraml SecurityGroup type normal
-	SecurityGroupTypeNoraml = "normal"
+	// SecurityGroupTypeNormal SecurityGroup type normal
+	SecurityGroupTypeNormal = "normal"
 	// SecurityGroupTypeEnterprise SecurityGroup type enterprise
 	SecurityGroupTypeEnterprise = "enterprise"
 
@@ -426,12 +426,12 @@ func getSecurityGroupIDs(machine runtimeclient.ObjectKey, machineProviderConfig 
 
 func getMaxInstancesBySecurityGroupType(securityGroupType string) int {
 	switch securityGroupType {
-	case SecurityGroupTypeNoraml:
-		return MaxInstanceOfSecurityGroupTypeNoraml
+	case SecurityGroupTypeNormal:
+		return MaxInstanceOfSecurityGroupTypeNormal
 	case SecurityGroupTypeEnterprise:
 		return MaxInstanceOfSecurityGroupTypeEnterprise
 	default:
-		return MaxInstanceOfSecurityGroupTypeNoraml
+		return MaxInstanceOfSecurityGroupTypeNormal
 	}
 }
 
