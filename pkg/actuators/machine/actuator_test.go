@@ -28,8 +28,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/AliyunContainerService/cluster-api-provider-alibabacloud/pkg/client/mock"
 	"github.com/golang/mock/gomock"
+	"github.com/openshift/cluster-api-provider-alibaba/pkg/client/mock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	machineapierrors "github.com/openshift/machine-api-operator/pkg/controller/machine"

@@ -93,7 +93,7 @@ Note: this info is RH only, it needs to be backported every time the `README.md`
 2. **Build and run AlibabaCloud actuator outside of the cluster**
 
    ```sh
-   $ go build -o bin/machine-controller-manager github.com/AliyunContainerService/cluster-api-provider-alibabacloud/cmd/manager
+   $ go build -o bin/machine-controller-manager github.com/openshift/cluster-api-provider-alibaba/cmd/manager
    ```
 
    ```sh
@@ -342,10 +342,3 @@ Note: this info is RH only, it needs to be backported every time the `README.md`
    ```sh
    $ kubectl  get machine
    ```
- 
-# Upstream Implementation
-Other branches of this repository may choose to track the upstream
-Kubernetes [Cluster-API AlibabaCloud provider](https://github.com/AliyunContainerService/cluster-api-provider-alibabacloud)
-
-In the future, we may align the master branch with the upstream project as it
-stabilizes within the community.

@@ -4,17 +4,17 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/AliyunContainerService/cluster-api-provider-alibabacloud/pkg/utils"
+	"github.com/openshift/cluster-api-provider-alibaba/pkg/utils"
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk"
 
 	"k8s.io/klog/v2"
 
-	"github.com/AliyunContainerService/cluster-api-provider-alibabacloud/pkg/version"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials/providers"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/slb"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/vpc"
+	"github.com/openshift/cluster-api-provider-alibaba/pkg/version"
 	machineapiapierrors "github.com/openshift/machine-api-operator/pkg/controller/machine"
 	corev1 "k8s.io/api/core/v1"
 	apimachineryerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -26,8 +26,8 @@ import (
 // AlibabaCloudClientBuilderFunc is function type for building alibabacloud client
 type AlibabaCloudClientBuilderFunc func(client client.Client, secretName, namespace, region string, configManagedClient client.Client) (Client, error)
 
-// machineProviderUserAgent is a named handler that will add cluster-api-provider-alibabacloud
-var machineProviderUserAgent = fmt.Sprintf("openshift.io cluster-api-provider-alibabacloud:%s", version.Version.String())
+// machineProviderUserAgent is a named handler that will add cluster-api-provider-alibaba
+var machineProviderUserAgent = fmt.Sprintf("openshift.io cluster-api-provider-alibaba:%s", version.Version.String())
 
 const (
 	kubeAccessKeyID           = "accessKeyID"

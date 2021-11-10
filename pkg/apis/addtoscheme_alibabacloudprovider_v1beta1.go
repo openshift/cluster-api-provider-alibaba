@@ -16,7 +16,7 @@ limitations under the License.
 
 package apis
 
-import "github.com/AliyunContainerService/cluster-api-provider-alibabacloud/pkg/apis/alibabacloudprovider/v1beta1"
+import "github.com/openshift/cluster-api-provider-alibaba/pkg/apis/alibabacloudprovider/v1beta1"
 
 func init() {
 	// Register the types with the Scheme so the components can map objects to GroupVersionKinds and back

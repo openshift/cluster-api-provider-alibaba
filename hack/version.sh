@@ -80,7 +80,7 @@ version::ldflags() {
         local key=${1}
         local val=${2}
         ldflags+=(
-            "-X 'github.com/AliyunContainerService/cluster-api-provider-alibabacloud/pkg/version.${key}=${val}'"
+            "-X 'github.com/openshift/cluster-api-provider-alibaba/pkg/version.${key}=${val}'"
         )
     }
 

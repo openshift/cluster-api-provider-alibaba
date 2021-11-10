@@ -1,4 +1,4 @@
-module github.com/AliyunContainerService/cluster-api-provider-alibabacloud
+module github.com/openshift/cluster-api-provider-alibaba
 
 go 1.16
 
