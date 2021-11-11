@@ -18,6 +18,7 @@ package machine
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -32,9 +33,9 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
 	mapierrors "github.com/openshift/machine-api-operator/pkg/controller/machine"
 
+	machinev1 "github.com/openshift/api/machine/v1beta1"
 	alibabacloudproviderv1 "github.com/openshift/cluster-api-provider-alibaba/pkg/apis/alibabacloudprovider/v1beta1"
 	alibabacloudClient "github.com/openshift/cluster-api-provider-alibaba/pkg/client"
-	machinev1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	"github.com/openshift/machine-api-operator/pkg/metrics"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -247,7 +248,6 @@ func runInstances(machine *machinev1.Machine, machineProviderConfig *alibabaclou
 			alibabacloudproviderv1.DefaultTenancy,
 			alibabacloudproviderv1.HostTenancy)
 	}
-
 	runResponse, err := client.RunInstances(runInstancesRequest)
 	if err != nil {
 		metrics.RegisterFailedInstanceCreate(&metrics.MachineLabels{
@@ -373,55 +373,60 @@ func getImageID(machine runtimeclient.ObjectKey, machineProviderConfig *alibabac
 }
 
 func getSecurityGroupIDs(machine runtimeclient.ObjectKey, machineProviderConfig *alibabacloudproviderv1.AlibabaCloudMachineProviderConfig, client alibabacloudClient.Client) (*[]string, error) {
-	klog.Infof("%s validate security group in region %s", machineProviderConfig.SecurityGroupID, machineProviderConfig.RegionID)
+	klog.Infof("query security groups in region %s", machineProviderConfig.RegionID)
 	var securityGroupIDs []string
 
 	// If SecurityGroupID is assigned, use it directly
-	if machineProviderConfig.SecurityGroupID != "" {
-		securityGroupIDs = append(securityGroupIDs, machineProviderConfig.SecurityGroupID)
-	} else {
-		// Otherwise, the query securityGroupIDs by the tags
-		for _, sg := range machineProviderConfig.SecurityGroups {
-			if sg.ID != "" {
-				securityGroupIDs = append(securityGroupIDs, sg.ID)
-			} else {
-				if sg.Tags != nil {
-					request := ecs.CreateDescribeSecurityGroupsRequest()
-					if machineProviderConfig.VpcID != "" {
-						request.VpcId = machineProviderConfig.VpcID
-					}
-					if machineProviderConfig.ResourceGroupID != "" {
-						request.ResourceGroupId = machineProviderConfig.ResourceGroupID
-					}
-					request.RegionId = machineProviderConfig.RegionID
-					request.Tag = buildDescribeSecurityGroupsTag(sg.Tags)
-					request.Scheme = "https"
+	if len(machineProviderConfig.SecurityGroups) == 0 {
+		return nil, errors.New("no security configuration provided")
+	}
 
-					response, err := client.DescribeSecurityGroups(request)
-					if err != nil {
-						metrics.RegisterFailedInstanceCreate(&metrics.MachineLabels{
-							Name:      machine.Name,
-							Namespace: machine.Namespace,
-							Reason:    err.Error(),
-						})
-						klog.Errorf("error describing securitygroup: %v", err)
-						return nil, fmt.Errorf("error describing securitygroup: %v", err)
-					}
-
-					if len(response.SecurityGroups.SecurityGroup) < 1 {
-						klog.Errorf("no securitygroup for given tags not found")
-						return nil, fmt.Errorf("no securitygroup for given tags not found")
-					}
-
-					for _, sg := range response.SecurityGroups.SecurityGroup {
-						securityGroupIDs = append(securityGroupIDs, sg.SecurityGroupId)
-					}
+	for _, sg := range machineProviderConfig.SecurityGroups {
+		if sg.ID != "" {
+			securityGroupIDs = append(securityGroupIDs, sg.ID)
+		} else {
+			if sg.Tags != nil {
+				ids, err := getSecurityGroupIDByTags(machine, machineProviderConfig, sg.Tags, client)
+				if err != nil {
+					return nil, err
 				}
+				securityGroupIDs = append(securityGroupIDs, ids...)
 			}
 		}
 	}
-
+	if len(securityGroupIDs) == 0 {
+		return nil, errors.New("no securitygroup IDs found from configuration")
+	}
 	return &securityGroupIDs, nil
+}
+
+func getSecurityGroupIDByTags(machine runtimeclient.ObjectKey, machineProviderConfig *alibabacloudproviderv1.AlibabaCloudMachineProviderConfig, tags []alibabacloudproviderv1.Tag, client alibabacloudClient.Client) ([]string, error) {
+	request := ecs.CreateDescribeSecurityGroupsRequest()
+	request.VpcId = machineProviderConfig.VpcID
+	request.ResourceGroupId = machineProviderConfig.ResourceGroupID
+	request.RegionId = machineProviderConfig.RegionID
+	request.Tag = buildDescribeSecurityGroupsTag(tags)
+	request.Scheme = "https"
+
+	response, err := client.DescribeSecurityGroups(request)
+	if err != nil {
+		metrics.RegisterFailedInstanceCreate(&metrics.MachineLabels{
+			Name:      machine.Name,
+			Namespace: machine.Namespace,
+			Reason:    err.Error(),
+		})
+		klog.Errorf("error describing securitygroup: %v", err)
+		return nil, fmt.Errorf("error describing securitygroup: %v", err)
+	}
+	if len(response.SecurityGroups.SecurityGroup) < 1 {
+		klog.Errorf("no securitygroup for given tags not found")
+		return nil, fmt.Errorf("no securitygroup for given tags not found")
+	}
+	securityGroupIDs := []string{}
+	for _, sg := range response.SecurityGroups.SecurityGroup {
+		securityGroupIDs = append(securityGroupIDs, sg.SecurityGroupId)
+	}
+	return securityGroupIDs, nil
 }
 
 func getMaxInstancesBySecurityGroupType(securityGroupType string) int {
@@ -450,51 +455,43 @@ func buildDescribeSecurityGroupsTag(tags []alibabacloudproviderv1.Tag) *[]ecs.De
 
 func getVSwitchID(machine runtimeclient.ObjectKey, machineProviderConfig *alibabacloudproviderv1.AlibabaCloudMachineProviderConfig, client alibabacloudClient.Client) (string, error) {
 	klog.Infof("validate vswitch in region %s", machineProviderConfig.RegionID)
-	vSwitchID := ""
-	if machineProviderConfig.VSwitchID != "" {
-		vSwitchID = machineProviderConfig.VSwitchID
+	if machineProviderConfig.VSwitch.ID == "" && len(machineProviderConfig.VSwitch.Tags) == 0 {
+		return "", errors.New("no vswitch configuration provided")
 	}
 
-	if machineProviderConfig.VSwitch != nil {
-		if machineProviderConfig.VSwitch.ID != "" {
-			vSwitchID = machineProviderConfig.VSwitch.ID
-		} else {
-			if machineProviderConfig.VSwitch.Tags != nil {
-				describeVSwitchesRequest := vpc.CreateDescribeVSwitchesRequest()
-				describeVSwitchesRequest.Scheme = "https"
-
-				describeVSwitchesRequest.RegionId = machineProviderConfig.RegionID
-				if machineProviderConfig.VpcID != "" {
-					describeVSwitchesRequest.VpcId = machineProviderConfig.VpcID
-				}
-				describeVSwitchesRequest.Tag = buildDescribeVSwitchesTag(machineProviderConfig.VSwitch.Tags)
-
-				describeVSwitchesResponse, err := client.DescribeVSwitches(describeVSwitchesRequest)
-				if err != nil {
-					metrics.RegisterFailedInstanceCreate(&metrics.MachineLabels{
-						Name:      machine.Name,
-						Namespace: machine.Namespace,
-						Reason:    err.Error(),
-					})
-					klog.Errorf("error describing vswitches: %v", err)
-					return "", fmt.Errorf("error describing vswitches: %v", err)
-				}
-
-				if len(describeVSwitchesResponse.VSwitches.VSwitch) < 1 {
-					klog.Errorf("no vswitches for given tags not found")
-					return "", fmt.Errorf("no vswitches for given tags not found")
-				}
-
-				vSwitchID = describeVSwitchesResponse.VSwitches.VSwitch[0].VSwitchId
-			}
-		}
+	if machineProviderConfig.VSwitch.ID != "" {
+		return machineProviderConfig.VSwitch.ID, nil
 	}
 
-	if vSwitchID == "" {
-		return "", fmt.Errorf("no vswitches were found")
+	if machineProviderConfig.VSwitch.Tags != nil {
+		return getVSwitchIDFromTags(machine, machineProviderConfig, client)
 	}
 
-	return vSwitchID, nil
+	return "", fmt.Errorf("no vSwitch found from configuration")
+}
+
+func getVSwitchIDFromTags(machine runtimeclient.ObjectKey, mpc *alibabacloudproviderv1.AlibabaCloudMachineProviderConfig, client alibabacloudClient.Client) (string, error) {
+	// Build a request to fetch the vSwitchID from the tags provided
+	describeVSwitchesRequest := vpc.CreateDescribeVSwitchesRequest()
+	describeVSwitchesRequest.Scheme = "https"
+	describeVSwitchesRequest.RegionId = mpc.RegionID
+	describeVSwitchesRequest.VpcId = mpc.VpcID
+	describeVSwitchesRequest.Tag = buildDescribeVSwitchesTag(mpc.VSwitch.Tags)
+	describeVSwitchesResponse, err := client.DescribeVSwitches(describeVSwitchesRequest)
+	if err != nil {
+		metrics.RegisterFailedInstanceCreate(&metrics.MachineLabels{
+			Name:      machine.Name,
+			Namespace: machine.Namespace,
+			Reason:    err.Error(),
+		})
+		klog.Errorf("error describing vswitches: %v", err)
+		return "", fmt.Errorf("error describing vswitches: %v", err)
+	}
+	if len(describeVSwitchesResponse.VSwitches.VSwitch) < 1 {
+		klog.Errorf("no vswitches found for given tags, vpcid, and regionid")
+		return "", fmt.Errorf("no vswitches found for given tags, vpcid, and regionid")
+	}
+	return describeVSwitchesResponse.VSwitches.VSwitch[0].VSwitchId, nil
 }
 
 func buildDescribeVSwitchesTag(tags []alibabacloudproviderv1.Tag) *[]vpc.DescribeVSwitchesTag {

@@ -9,7 +9,7 @@ import (
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
 
-	machinev1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
+	machinev1 "github.com/openshift/api/machine/v1beta1"
 	machinecontroller "github.com/openshift/machine-api-operator/pkg/controller/machine"
 
 	alibabacloudproviderv1 "github.com/openshift/cluster-api-provider-alibaba/pkg/apis/alibabacloudprovider/v1beta1"
@@ -34,7 +34,7 @@ const (
 	stubVpcID                   = "vpc-3ze4u29pd4lniym7i1xnp"
 	stubVSwitchID               = "vsw-7ze567qrl5das7q8s4rei"
 	stubInstanceID              = "i-2ze3hj0qh9d290rpax7w"
-	stubSecurityGroupId         = "sg-2zeebk9qd965vc2xqq4w"
+	stubSecurityGroupID         = "sg-2zeebk9qd965vc2xqq4w"
 	stubSystemDiskCategory      = "cloud_essd"
 	stubSystemDiskSize          = 120
 	stubInternetMaxBandwidthOut = 100
@@ -57,13 +57,15 @@ func stubAlibabaCloudCredentialsSecret() *corev1.Secret {
 
 func stubProviderConfig() *alibabacloudproviderv1.AlibabaCloudMachineProviderConfig {
 	return &alibabacloudproviderv1.AlibabaCloudMachineProviderConfig{
-		InstanceType:            stubInstanceType,
-		ImageID:                 stubImageID,
-		RegionID:                stubRegionID,
-		ZoneID:                  stubZoneID,
-		SecurityGroupID:         stubSecurityGroupId,
+		InstanceType: stubInstanceType,
+		ImageID:      stubImageID,
+		RegionID:     stubRegionID,
+		ZoneID:       stubZoneID,
+		SecurityGroups: []alibabacloudproviderv1.AlibabaResourceReference{
+			{ID: stubVSwitchID},
+		},
 		VpcID:                   stubVpcID,
-		VSwitchID:               stubVSwitchID,
+		VSwitch:                 alibabacloudproviderv1.AlibabaResourceReference{ID: stubVSwitchID},
 		SystemDiskCategory:      stubSystemDiskCategory,
 		SystemDiskSize:          stubSystemDiskSize,
 		InternetMaxBandwidthOut: stubInternetMaxBandwidthOut,
@@ -143,7 +145,7 @@ func stubRunInstancesRequest() *ecs.RunInstancesRequest {
 	request.InstanceType = stubInstanceType
 	request.ImageId = stubImageID
 	request.VSwitchId = stubVSwitchID
-	request.SecurityGroupId = stubSecurityGroupId
+	request.SecurityGroupId = stubSecurityGroupID
 	request.Password = stubPassword
 	request.MinAmount = requests.NewInteger(1)
 	request.Amount = requests.NewInteger(1)

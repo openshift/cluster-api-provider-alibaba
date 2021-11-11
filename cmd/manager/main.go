@@ -23,6 +23,7 @@ import (
 
 	"github.com/openshift/cluster-api-provider-alibaba/pkg/version"
 
+	"github.com/openshift/machine-api-operator/pkg/controller/machine"
 	"github.com/openshift/machine-api-operator/pkg/metrics"
 
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -35,11 +36,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 
 	configv1 "github.com/openshift/api/config/v1"
+	"github.com/openshift/api/machine/v1beta1"
 	machineactuator "github.com/openshift/cluster-api-provider-alibaba/pkg/actuators/machine"
 	machinesetcontroller "github.com/openshift/cluster-api-provider-alibaba/pkg/actuators/machineset"
 	"github.com/openshift/cluster-api-provider-alibaba/pkg/apis"
-	"github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
-	"github.com/openshift/machine-api-operator/pkg/controller/machine"
+
 	"k8s.io/klog/v2"
 	"k8s.io/klog/v2/klogr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -53,7 +54,7 @@ var (
 	leaseDuration    = 120 * time.Second
 	renewDealine     = 110 * time.Second
 	retryPeriod      = 20 * time.Second
-	leaderElectionID = "cluster-api-provider-alibabacloud-leader"
+	leaderElectionID = "cluster-api-provider-alibaba-leader"
 )
 
 func main() {
@@ -111,7 +112,7 @@ func main() {
 
 	// print release version
 	if printVersion != nil && *printVersion {
-		klog.Infof("The cluster-api-provider-alibabacloud version {%s}", version.PrintVerboseVersionInfo())
+		klog.Infof("The cluster-api-provider-alibaba version {%s}", version.PrintVerboseVersionInfo())
 	}
 
 	cfg := config.GetConfigOrDie()

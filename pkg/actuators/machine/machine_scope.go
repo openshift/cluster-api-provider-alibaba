@@ -27,10 +27,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog"
 
-	alibabacloudClient "github.com/openshift/cluster-api-provider-alibaba/pkg/client"
-
+	machinev1 "github.com/openshift/api/machine/v1beta1"
 	v1beta1 "github.com/openshift/cluster-api-provider-alibaba/pkg/apis/alibabacloudprovider/v1beta1"
-	machinev1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
+	alibabacloudClient "github.com/openshift/cluster-api-provider-alibaba/pkg/client"
 	machineapierros "github.com/openshift/machine-api-operator/pkg/controller/machine"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )

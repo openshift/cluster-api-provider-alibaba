@@ -93,7 +93,7 @@ type DataDisk struct {
 	DeleteWithInstance *bool `name:"deleteWithInstance,omitempty"`
 }
 
-// Tag  The tags of ECS Instance
+// Tag is metadata used to identify ECS Instances
 type Tag struct {
 	Value string `name:"value"`
 	Key   string `name:"key"`

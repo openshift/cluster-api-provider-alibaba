@@ -54,13 +54,10 @@ type AlibabaCloudMachineProviderConfig struct {
 	// The ID of the image used to create the instance.
 	ImageID string `json:"imageId"`
 
-	// The ID of the security group to which to assign the instance. Instances in the same security group can communicate with each other.
-	SecurityGroupID string `json:"securityGroupId"`
-
 	// SecurityGroups is an array of references to security groups which to assign the instance. The valid values of N vary based on the
 	// maximum number of security groups to which an instance can belong. For more information, see the "Security group limits" section in Limits.
 	// https://www.alibabacloud.com/help/doc-detail/101348.htm?spm=a2c63.p38356.879954.48.78f0199aX3dfIE
-	SecurityGroups []ResourceTagReference `json:"securityGroups,omitempty"`
+	SecurityGroups []AlibabaResourceReference `json:"securityGroups,omitempty"`
 
 	//The name of the instance. The name must be 2 to 128 characters in length. It must start with a letter and cannot start with
 	//http:// or https://. It can contain letters, digits, colons (:), underscores (_), periods (.), and hyphens (-). If you do not specify
@@ -139,13 +136,10 @@ type AlibabaCloudMachineProviderConfig struct {
 	//This parameter is empty by default.
 	Description string `json:"description,omitempty"`
 
-	//The ID of the vSwitch to which to connect the instance. This parameter is required when you create an instance of the VPC type. You can call the DescribeVSwitches operation to query the created vSwitches.
-	VSwitchID string `json:"vSwitchId,omitempty"`
-
 	//VSwitch is a reference to the vswitch to use for this instance
 	//This parameter is required when you create an instance of the VPC type.
 	//You can call the DescribeVSwitches operation to query the created vSwitches.
-	VSwitch *ResourceTagReference `json:"vSwitch,omitempty"`
+	VSwitch AlibabaResourceReference `json:"vSwitch,omitempty"`
 
 	//Specifies whether the instance is I/O optimized. Valid values:
 	//none: The instance is not I/O optimized.
@@ -166,8 +160,6 @@ type AlibabaCloudMachineProviderConfig struct {
 	//The unit of the subscription period. Default value: Month.
 	//Set the value to Month.
 	PeriodUnit string `json:"periodUnit,omitempty"`
-
-	Tags []Tag `json:"tags,omitempty"`
 
 	//The user data of the instance. The user data must be encoded in Base64. The maximum size of raw data is 16 KB.
 	UserData string `json:"userData,omitempty"`
@@ -217,17 +209,21 @@ type AlibabaCloudMachineProviderConfig struct {
 	// CredentialsSecret is a reference to the secret with alibabacloud credentials. Otherwise, defaults to permissions
 	// provided by attached RAM role where the actuator is running.
 	CredentialsSecret *corev1.LocalObjectReference `json:"credentialsSecret,omitempty"`
+
+	// Tags are the set of metadata to add to an instance.
+	// +optional
+	Tags []Tag `json:"tags,omitempty"`
 }
 
 // ResourceTagReference is a reference to a specific AlibabaCloud resource by ID, or tags.
 // Only one of ID or Tags may be specified. Specifying more than one will result in
 // a validation error.
-type ResourceTagReference struct {
+type AlibabaResourceReference struct {
 	// ID of resource
 	// +optional
 	ID string `json:"id,omitempty"`
 
-	// Tags is a set of tags used to identify a resource
+	// Tags is a set of metadata based upon ECS object tags used to identify a resource
 	Tags []Tag `json:"tags,omitempty"`
 }
 

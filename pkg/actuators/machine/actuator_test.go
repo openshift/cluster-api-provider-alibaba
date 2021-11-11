@@ -38,7 +38,7 @@ import (
 	"k8s.io/client-go/tools/record"
 
 	configv1 "github.com/openshift/api/config/v1"
-	machinev1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
+	machinev1 "github.com/openshift/api/machine/v1beta1"
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
