@@ -524,6 +524,7 @@ func buildTagList(machineName string, clusterID string, machineTags []alibabaclo
 		{Key: clusterFilterKeyPrefix + clusterID, Value: clusterFilterValue},
 		{Key: clusterFilterName, Value: machineName},
 		{Key: clusterOwnedKey, Value: clusterOwnedValue},
+		{Key: machineTagKeyFrom, Value: machineTagValueFrom},
 	}...)
 
 	return removeDuplicatedTags(rawTagList)

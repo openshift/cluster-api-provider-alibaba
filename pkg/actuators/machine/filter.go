@@ -28,6 +28,9 @@ const (
 	clusterFilterName      = "Name"
 	clusterOwnedKey        = "kubernetes-sigs/cluster-api"
 	clusterOwnedValue      = "cluster-api-provider-alibabacloud"
+
+	machineTagKeyFrom   = "sigs.k8s.io/cloud-provider-alibaba/origin"
+	machineTagValueFrom = "ocp"
 )
 
 func clusterTagFilter(clusterID, machineName string) []ecs.DescribeInstancesTag {
