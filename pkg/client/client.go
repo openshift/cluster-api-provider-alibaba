@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/openshift/cluster-api-provider-alibaba/pkg/utils"
+	"gopkg.in/ini.v1"
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk"
 
@@ -30,8 +31,11 @@ type AlibabaCloudClientBuilderFunc func(client client.Client, secretName, namesp
 var machineProviderUserAgent = fmt.Sprintf("openshift.io cluster-api-provider-alibaba:%s", version.Version.String())
 
 const (
-	kubeAccessKeyID           = "accessKeyID"
-	kubeAccessKeySecret       = "accessKeySecret"
+	kubeAccessKeyID           = "access_key_id"
+	kubeAccessKeySecret       = "access_key_secret"
+	kubeIniDefaultSection     = "default"
+	kubeCredentialCredentials = "credentials"
+	kubeCredentialTypeString  = "type"
 	kubeAccessKeyStsToken     = "accessKeyStsToken"
 	kubeRoleArn               = "roleArn"
 	kubeRoleSessionName       = "roleSessionName"
@@ -42,6 +46,9 @@ const (
 	KubeCloudConfigNamespace = "openshift-config-managed"
 
 	kubeCloudConfigName = "kube-cloud-config"
+
+	kubeCredentialAccessKey = "access_key"
+	kubeCredentialToken     = "token"
 )
 
 // Client is a wrapper object for actual alibabacloud SDK clients to allow for easier testing.
@@ -620,7 +627,6 @@ func NewClient(ctrlRuntimeClient client.Client, secretName, namespace, regionID 
 //https://github.com/aliyun/alibaba-cloud-sdk-go/blob/master/sdk/auth/credentials/providers/configuration.go
 func newConfiguration(ctrlRuntimeClient client.Client, secretName, namespace string, configManagedClient client.Client) (*providers.Configuration, error) {
 	config := &providers.Configuration{}
-
 	if secretName != "" {
 		var secret corev1.Secret
 		if err := ctrlRuntimeClient.Get(context.Background(), client.ObjectKey{Namespace: namespace, Name: secretName}, &secret); err != nil {
@@ -629,13 +635,116 @@ func newConfiguration(ctrlRuntimeClient client.Client, secretName, namespace str
 			}
 			return nil, err
 		}
-		err := fetchCredentialsFileFromSecret(&secret, config)
+		err := fetchCredentialsIniFromSecret(&secret, config)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch  credentials file from Secret: %v", err)
 		}
 	}
 
 	return config, nil
+}
+
+func fetchCredentialsIniFromSecret(secret *corev1.Secret, config *providers.Configuration) error {
+	creds, ok := secret.Data[kubeCredentialCredentials]
+	if !ok {
+		return fmt.Errorf("failed to fetch key 'credentials' in secret data")
+	}
+	inifile, err := ini.Load(creds)
+	if err != nil {
+		return err
+	}
+	s, err := inifile.GetSection(kubeIniDefaultSection)
+	if err != nil {
+		return err
+	}
+	if !s.HasKey(kubeCredentialTypeString) {
+		// missing credential type property
+		return fmt.Errorf("missing credential type in INI secret")
+	}
+
+	accessType, err := s.GetKey(kubeCredentialTypeString)
+	if err != nil {
+		return err
+	}
+	switch at := accessType.String(); at {
+	// access key
+	case kubeCredentialAccessKey:
+		if !s.HasKey(kubeAccessKeyID) || !s.HasKey(kubeAccessKeySecret) {
+			return fmt.Errorf("missing %s or %s from credential", kubeAccessKeyID, kubeAccessKeySecret)
+		}
+
+		id, err := getKeyFromIniSection(kubeAccessKeyID, s)
+		if err != nil {
+			return err
+		}
+
+		secret, err := getKeyFromIniSection(kubeAccessKeySecret, s)
+		if err != nil {
+			return err
+		}
+
+		config.AccessKeyID = id
+		config.AccessKeySecret = secret
+	// token
+	case kubeCredentialToken:
+		if !s.HasKey(kubeAccessKeyStsToken) {
+			return fmt.Errorf("missing %s from credential", kubeAccessKeyStsToken)
+		}
+
+		sts, err := getKeyFromIniSection(kubeAccessKeyStsToken, s)
+		if err != nil {
+			return err
+		}
+
+		config.AccessKeyStsToken = sts
+	}
+	if s.HasKey(kubeRoleArn) && s.HasKey(kubeRoleSessionName) && s.HasKey(kubeRoleSessionExpiration) {
+		exp, err := getKeyFromIniSection(kubeRoleSessionExpiration, s)
+		if err != nil {
+			return err
+		}
+
+		arn, err := getKeyFromIniSection(kubeRoleArn, s)
+		if err != nil {
+			return err
+		}
+
+		name, err := getKeyFromIniSection(kubeRoleSessionName, s)
+		if err != nil {
+			return err
+		}
+
+		expPointer, err := utils.String2IntPointer(exp)
+		if err != nil {
+			return err
+		}
+
+		config.RoleArn = arn
+		config.RoleSessionName = name
+		config.RoleSessionExpiration = expPointer
+	}
+
+	if s.HasKey(kubeRoleName) {
+		rn, err := getKeyFromIniSection(kubeRoleName, s)
+		if err != nil {
+			return err
+		}
+		config.RoleName = rn
+	}
+
+	return nil
+}
+
+func getKeyFromIniSection(key string, s *ini.Section) (string, error) {
+	v, err := s.GetKey(key)
+	if err != nil {
+		return "", err
+	}
+	if v.String() == "" {
+		return "", fmt.Errorf("%s is empty in credential", key)
+	}
+
+	return v.String(), nil
 }
 
 // fetchCredentialsFileFromSecret fetch credentials from screct
