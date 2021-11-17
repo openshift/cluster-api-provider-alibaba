@@ -17,9 +17,9 @@ import (
 	"fmt"
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
+	machinev1 "github.com/openshift/api/machine/v1beta1"
 	alibabacloudproviderv1 "github.com/openshift/cluster-api-provider-alibaba/pkg/apis/alibabacloudprovider/v1beta1"
 	alibabacloudClient "github.com/openshift/cluster-api-provider-alibaba/pkg/client"
-	machinev1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	"k8s.io/klog"
 )
 

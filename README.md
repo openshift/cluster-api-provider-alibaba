@@ -1,4 +1,4 @@
-# OpenShift cluster-api-provider-alibabacloud
+# OpenShift cluster-api-provider-alibaba
 
 This repository hosts an implementation of a provider for AlibabaCloud for the
 OpenShift [machine-api](https://github.com/openshift/cluster-api).

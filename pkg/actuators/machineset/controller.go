@@ -25,8 +25,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/go-logr/logr"
+	machinev1 "github.com/openshift/api/machine/v1beta1"
 	alibabacloudproviderv1 "github.com/openshift/cluster-api-provider-alibaba/pkg/apis/alibabacloudprovider/v1beta1"
-	machinev1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	mapierrors "github.com/openshift/machine-api-operator/pkg/controller/machine"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
