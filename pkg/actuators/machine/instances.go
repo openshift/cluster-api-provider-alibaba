@@ -152,21 +152,21 @@ func runInstances(machine *machinev1.Machine, machineProviderConfig *alibabaclou
 	}
 
 	// InternetMaxBandwidthOut
-	if machineProviderConfig.InternetMaxBandwidthOut > 0 {
-		runInstancesRequest.InternetMaxBandwidthOut = requests.NewInteger(machineProviderConfig.InternetMaxBandwidthOut)
+	if machineProviderConfig.Bandwidth.InternetMaxBandwidthOut > 0 {
+		runInstancesRequest.InternetMaxBandwidthOut = requests.NewInteger(machineProviderConfig.Bandwidth.InternetMaxBandwidthOut)
 	}
 
 	// VswitchId
 	runInstancesRequest.VSwitchId = vSwitchID
 
 	// SystemDisk
-	runInstancesRequest.SystemDiskCategory = machineProviderConfig.SystemDiskCategory
-	runInstancesRequest.SystemDiskSize = strconv.Itoa(machineProviderConfig.SystemDiskSize)
-	if machineProviderConfig.SystemDiskDiskName != "" {
-		runInstancesRequest.SystemDiskDiskName = machineProviderConfig.SystemDiskDiskName
+	runInstancesRequest.SystemDiskCategory = machineProviderConfig.SystemDisk.Category
+	runInstancesRequest.SystemDiskSize = strconv.Itoa(machineProviderConfig.SystemDisk.Size)
+	if machineProviderConfig.SystemDisk.Name != "" {
+		runInstancesRequest.SystemDiskDiskName = machineProviderConfig.SystemDisk.Name
 	}
-	if machineProviderConfig.SystemDiskDescription != "" {
-		runInstancesRequest.SystemDiskDescription = machineProviderConfig.SystemDiskDescription
+	if machineProviderConfig.SystemDisk.Description != "" {
+		runInstancesRequest.SystemDiskDescription = machineProviderConfig.SystemDisk.Description
 	}
 
 	// DataDisk
@@ -179,8 +179,8 @@ func runInstances(machine *machinev1.Machine, machineProviderConfig *alibabaclou
 				Encrypted: strconv.FormatBool(dataDisk.Encrypted),
 			}
 			// DiskName
-			if dataDisk.DiskName != "" {
-				runInstancesDataDisk.DiskName = dataDisk.DiskName
+			if dataDisk.Name != "" {
+				runInstancesDataDisk.DiskName = dataDisk.Name
 			}
 
 			// SnapshotID
@@ -216,21 +216,6 @@ func runInstances(machine *machinev1.Machine, machineProviderConfig *alibabaclou
 			dataDisks = append(dataDisks, runInstancesDataDisk)
 		}
 		runInstancesRequest.DataDisk = &dataDisks
-	}
-
-	// KeyPairName
-	if machineProviderConfig.KeyPairName != "" {
-		runInstancesRequest.KeyPairName = machineProviderConfig.KeyPairName
-	}
-
-	// Password
-	if machineProviderConfig.Password != "" {
-		runInstancesRequest.Password = machineProviderConfig.Password
-	}
-
-	//If userData is not empty set it
-	if userData != "" {
-		runInstancesRequest.UserData = userData
 	}
 
 	// Setting Tenancy

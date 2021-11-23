@@ -64,12 +64,15 @@ func stubProviderConfig() *alibabacloudproviderv1.AlibabaCloudMachineProviderCon
 		SecurityGroups: []alibabacloudproviderv1.AlibabaResourceReference{
 			{ID: stubVSwitchID},
 		},
-		VpcID:                   stubVpcID,
-		VSwitch:                 alibabacloudproviderv1.AlibabaResourceReference{ID: stubVSwitchID},
-		SystemDiskCategory:      stubSystemDiskCategory,
-		SystemDiskSize:          stubSystemDiskSize,
-		InternetMaxBandwidthOut: stubInternetMaxBandwidthOut,
-		Password:                stubPassword,
+		VpcID:   stubVpcID,
+		VSwitch: alibabacloudproviderv1.AlibabaResourceReference{ID: stubVSwitchID},
+		SystemDisk: alibabacloudproviderv1.SystemDiskProperties{
+			Category: stubSystemDiskCategory,
+			Size:     stubSystemDiskSize,
+		},
+		Bandwidth: alibabacloudproviderv1.BandwidthProperties{
+			InternetMaxBandwidthOut: stubInternetMaxBandwidthOut,
+		},
 		CredentialsSecret: &corev1.LocalObjectReference{
 			Name: alibabaCloudCredentialsSecretName,
 		},
