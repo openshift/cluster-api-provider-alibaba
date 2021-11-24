@@ -28,7 +28,7 @@ endif
 GOARCH  ?= $(shell go env GOARCH)
 GOOS    ?= $(shell go env GOOS)
 
-VERSION     ?= $(shell git describe --tags --abbrev=7)
+VERSION     ?= $(shell git describe  --always --abbrev=7)
 REPO_PATH   ?= github.com/openshift/cluster-api-provider-alibaba
 LD_FLAGS    ?= -X $(REPO_PATH)/pkg/version.Raw=$(VERSION) $(shell hack/version.sh)  -extldflags "-static"
 MUTABLE_TAG ?= latest
@@ -99,6 +99,8 @@ deepcopy: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 build: ## build binaries
 	$(DOCKER_CMD) CGO_ENABLED=0 go build $(GOGCFLAGS) -o "bin/machine-controller-manager" \
                -ldflags "$(LD_FLAGS)" "$(REPO_PATH)/cmd/manager"
+	$(DOCKER_CMD) go build  $(GOGCFLAGS) -o "bin/termination-handler" \
+	             -ldflags "$(LD_FLAGS)" "$(REPO_PATH)/cmd/termination-handler"
 
 .PHONY: images
 images: ## Create images
