@@ -218,6 +218,10 @@ func runInstances(machine *machinev1.Machine, machineProviderConfig *alibabaclou
 		runInstancesRequest.DataDisk = &dataDisks
 	}
 
+	if userData != "" {
+		runInstancesRequest.UserData = userData
+	}
+
 	// Setting Tenancy
 	instanceTenancy := machineProviderConfig.Tenancy
 
