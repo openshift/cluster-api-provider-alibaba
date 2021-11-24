@@ -3,14 +3,16 @@ package client
 import (
 	"context"
 	"fmt"
-
-	"github.com/openshift/cluster-api-provider-alibaba/pkg/utils"
+	"io/ioutil"
+	"os"
+	"sync"
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk"
 
 	"k8s.io/klog/v2"
 
-	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials/providers"
+	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth"
+	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials/provider"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/slb"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/vpc"
@@ -29,9 +31,12 @@ type AlibabaCloudClientBuilderFunc func(client client.Client, secretName, namesp
 // machineProviderUserAgent is a named handler that will add cluster-api-provider-alibaba
 var machineProviderUserAgent = fmt.Sprintf("openshift.io cluster-api-provider-alibaba:%s", version.Version.String())
 
+var mutex sync.Mutex
+
 const (
-	kubeAccessKeyID           = "accessKeyID"
-	kubeAccessKeySecret       = "accessKeySecret"
+	kubeAccessKeyID           = "access_key_id"
+	kubeAccessKeySecret       = "access_key_secret"
+	kubeCredentialCredentials = "credentials"
 	kubeAccessKeyStsToken     = "accessKeyStsToken"
 	kubeRoleArn               = "roleArn"
 	kubeRoleSessionName       = "roleSessionName"
@@ -571,16 +576,8 @@ func (client *alibabacloudClient) DescribeVServerGroupAttribute(request *slb.Des
 
 // NewClient creates our client wrapper object for the actual alibabacloud clients we use.
 func NewClient(ctrlRuntimeClient client.Client, secretName, namespace, regionID string, configManagedClient client.Client) (Client, error) {
-	config, err := newConfiguration(ctrlRuntimeClient, secretName, namespace, configManagedClient)
+	credential, err := getCredentialFromSecret(ctrlRuntimeClient, secretName, namespace, configManagedClient)
 	if err != nil {
-		return nil, err
-	}
-
-	provider := providers.NewConfigurationCredentialProvider(config)
-
-	credential, err := provider.Retrieve()
-	if err != nil {
-		klog.Errorf("error %v ", err)
 		return nil, err
 	}
 
@@ -618,85 +615,44 @@ func NewClient(ctrlRuntimeClient client.Client, secretName, namespace, regionID 
 
 //Init alibabacloud configuration
 //https://github.com/aliyun/alibaba-cloud-sdk-go/blob/master/sdk/auth/credentials/providers/configuration.go
-func newConfiguration(ctrlRuntimeClient client.Client, secretName, namespace string, configManagedClient client.Client) (*providers.Configuration, error) {
-	config := &providers.Configuration{}
-
-	if secretName != "" {
-		var secret corev1.Secret
-		if err := ctrlRuntimeClient.Get(context.Background(), client.ObjectKey{Namespace: namespace, Name: secretName}, &secret); err != nil {
-			if apimachineryerrors.IsNotFound(err) {
-				return nil, machineapiapierrors.InvalidMachineConfiguration("alibabacloud credentials secret %s/%s: %v not found", namespace, secretName, err)
-			}
-			return nil, err
-		}
-		err := fetchCredentialsFileFromSecret(&secret, config)
-		if err != nil {
-			return nil, fmt.Errorf("failed to fetch  credentials file from Secret: %v", err)
-		}
+func getCredentialFromSecret(ctrlRuntimeClient client.Client, secretName, namespace string, configManagedClient client.Client) (auth.Credential, error) {
+	if secretName == "" {
+		return nil, fmt.Errorf("secret name is empty")
 	}
-
-	return config, nil
+	var secret corev1.Secret
+	if err := ctrlRuntimeClient.Get(context.Background(), client.ObjectKey{Namespace: namespace, Name: secretName}, &secret); err != nil {
+		if apimachineryerrors.IsNotFound(err) {
+			return nil, machineapiapierrors.InvalidMachineConfiguration("alibabacloud credentials secret %s/%s: %v not found", namespace, secretName, err)
+		}
+		return nil, err
+	}
+	return fetchCredentialsIniFromSecret(&secret)
 }
 
-// fetchCredentialsFileFromSecret fetch credentials from screct
-// alibabacloud accessKeyID accessKeySecret stsToken
-//roleArn, roleName ,roleSessionName ,roleSessionExpiration
-func fetchCredentialsFileFromSecret(secret *corev1.Secret, config *providers.Configuration) error {
-	//accessKeyID/accessKeySecret
-	if len(secret.Data[kubeAccessKeyID]) > 0 && len(secret.Data[kubeAccessKeySecret]) > 0 {
-		config.AccessKeyID = utils.ByteArray2String(secret.Data[kubeAccessKeyID])
-		config.AccessKeySecret = utils.ByteArray2String(secret.Data[kubeAccessKeySecret])
+func fetchCredentialsIniFromSecret(secret *corev1.Secret) (auth.Credential, error) {
+	creds, ok := secret.Data[kubeCredentialCredentials]
+	if !ok {
+		return nil, fmt.Errorf("failed to fetch key 'credentials' in secret data")
 	}
-
-	//ststoken
-	if len(secret.Data[kubeAccessKeyStsToken]) > 0 {
-		config.AccessKeyStsToken = utils.ByteArray2String(secret.Data[kubeAccessKeyStsToken])
+	f, err := ioutil.TempFile("", "alibaba-creds-*")
+	if err != nil {
+		return nil, err
 	}
+	defer os.Remove(f.Name())
+	defer f.Close()
 
-	// roleArn ,roleSessionName ,roleSessionExpiration
-	if len(secret.Data[kubeRoleArn]) > 0 && len(secret.Data[kubeRoleSessionName]) > 0 && len(secret.Data[kubeRoleSessionExpiration]) > 0 {
-		if roleSessionExpiration, err := utils.String2IntPointer(string(secret.Data[kubeRoleSessionExpiration])); roleSessionExpiration != nil && err == nil {
-			config.RoleArn = string(secret.Data[kubeRoleArn])
-			config.RoleSessionName = string(secret.Data[kubeRoleSessionName])
-			config.RoleSessionExpiration = roleSessionExpiration
-		}
+	_, err = f.Write(creds)
+	if err != nil {
+		return nil, err
 	}
-
-	// roleName
-	if len(secret.Data[kubeRoleName]) > 0 {
-		config.RoleName = string(secret.Data[kubeRoleName])
-	}
-
-	return nil
-}
-
-// fetchCredentialsFileFromConfigMap fetch oleArn, roleName ,roleSessionName ,roleSessionExpiration from configmap
-// roleArn, roleName ,roleSessionName ,roleSessionExpiration
-func fetchCredentialsFileFromConfigMap(namespace string, configManagedClient client.Client, config *providers.Configuration) error {
-	cm := &corev1.ConfigMap{}
-	switch err := configManagedClient.Get(
-		context.Background(),
-		client.ObjectKey{Namespace: namespace, Name: kubeCloudConfigName},
-		cm,
-	); {
-	case apimachineryerrors.IsNotFound(err):
-		// no cloud config ConfigMap
-		return nil
-	case err != nil:
-		return fmt.Errorf("failed to get kube-cloud-config ConfigMap: %w", err)
-	}
-
-	if len(cm.Data[kubeRoleArn]) > 0 && len(cm.Data[kubeRoleSessionName]) > 0 && len(cm.Data[kubeRoleSessionExpiration]) > 0 {
-		if roleSessionExpiration, err := utils.String2IntPointer(cm.Data[kubeRoleSessionExpiration]); roleSessionExpiration != nil && err == nil {
-			config.RoleArn = cm.Data[kubeRoleArn]
-			config.RoleSessionName = cm.Data[kubeRoleSessionName]
-			config.RoleSessionExpiration = roleSessionExpiration
-		}
-	}
-
-	if len(cm.Data[kubeRoleName]) > 0 {
-		config.RoleName = cm.Data[kubeRoleName]
-	}
-
-	return nil
+	// This lock is used to prevent the environment variable from being updated while we
+	// are using the environment variable to call the Alibaba credential provider chain.
+	mutex.Lock()
+	defer mutex.Unlock()
+	os.Setenv(provider.ENVCredentialFile, f.Name())
+	defer os.Unsetenv(provider.ENVCredentialFile)
+	// use Alibaba provider initialization
+	p := provider.NewProfileProvider("default")
+	// return a valid auth credential
+	return p.Resolve()
 }
