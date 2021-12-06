@@ -305,7 +305,7 @@ Note: this info is RH only, it needs to be backported every time the `README.md`
          node-role.kubernetes.io/infra: ""
      providerSpec:
        value:
-         apiVersion: alibabacloudproviderconfig.openshift.io/v1alpha1
+         apiVersion: alibabacloudproviderconfig.openshift.io/v1
          kind: AlibabaCloudMachineProviderConfig
          instanceType: FILLIN
          imageId: FILLIN

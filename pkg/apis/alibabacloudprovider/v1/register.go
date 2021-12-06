@@ -14,18 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package v1beta1 contains API Schema definitions for the alibabacloudmachineproviderconfig v1beta1 API group
+// Package v1 contains API Schema definitions for the alibabacloudmachineproviderconfig v1 API group
 // +k8s:openapi-gen=true
 // +k8s:deepcopy-gen=package,register
 // +k8s:conversion-gen=github.com/openshift/cluster-api-provider-alibaba/pkg/apis/alibabacloudmachineproviderconfig
 // +k8s:defaulter-gen=TypeMeta
 // +groupName=alibabacloudmachineproviderconfig.openshift.io
-package v1beta1
+package v1
 
 import (
 	"encoding/json"
 	"fmt"
 
+	machinev1 "github.com/openshift/api/machine/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/klog/v2"
@@ -35,19 +36,19 @@ import (
 
 var (
 	// SchemeGroupVersion is group version used to register these objects
-	SchemeGroupVersion = schema.GroupVersion{Group: "alibabacloudmachineproviderconfig.openshift.io", Version: "v1beta1"}
+	SchemeGroupVersion = schema.GroupVersion{Group: "alibabacloudmachineproviderconfig.openshift.io", Version: "v1"}
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
 	SchemeBuilder = &scheme.Builder{GroupVersion: SchemeGroupVersion}
 )
 
 // ProviderSpecFromRawExtension unmarshals a raw extension into an AlibabaCloudMachineProviderConfig type
-func ProviderSpecFromRawExtension(rawExtension *runtime.RawExtension) (*AlibabaCloudMachineProviderConfig, error) {
+func ProviderSpecFromRawExtension(rawExtension *runtime.RawExtension) (*machinev1.AlibabaCloudMachineProviderConfig, error) {
 	if rawExtension == nil {
-		return &AlibabaCloudMachineProviderConfig{}, nil
+		return &machinev1.AlibabaCloudMachineProviderConfig{}, nil
 	}
 
-	spec := new(AlibabaCloudMachineProviderConfig)
+	spec := new(machinev1.AlibabaCloudMachineProviderConfig)
 	if err := yaml.Unmarshal(rawExtension.Raw, &spec); err != nil {
 		return nil, fmt.Errorf("error unmarshalling providerSpec: %v", err)
 	}
@@ -57,12 +58,12 @@ func ProviderSpecFromRawExtension(rawExtension *runtime.RawExtension) (*AlibabaC
 }
 
 // ProviderStatusFromRawExtension unmarshals a raw extension into an AlibabaCloudMachineProviderStatus type
-func ProviderStatusFromRawExtension(rawExtension *runtime.RawExtension) (*AlibabaCloudMachineProviderStatus, error) {
+func ProviderStatusFromRawExtension(rawExtension *runtime.RawExtension) (*machinev1.AlibabaCloudMachineProviderStatus, error) {
 	if rawExtension == nil {
-		return &AlibabaCloudMachineProviderStatus{}, nil
+		return &machinev1.AlibabaCloudMachineProviderStatus{}, nil
 	}
 
-	providerStatus := new(AlibabaCloudMachineProviderStatus)
+	providerStatus := new(machinev1.AlibabaCloudMachineProviderStatus)
 	if err := yaml.Unmarshal(rawExtension.Raw, providerStatus); err != nil {
 		return nil, fmt.Errorf("error unmarshalling providerStatus: %v", err)
 	}
@@ -72,7 +73,7 @@ func ProviderStatusFromRawExtension(rawExtension *runtime.RawExtension) (*Alibab
 }
 
 // RawExtensionFromProviderSpec marshals the machine provider spec.
-func RawExtensionFromProviderSpec(spec *AlibabaCloudMachineProviderConfig) (*runtime.RawExtension, error) {
+func RawExtensionFromProviderSpec(spec *machinev1.AlibabaCloudMachineProviderConfig) (*runtime.RawExtension, error) {
 	if spec == nil {
 		return &runtime.RawExtension{}, nil
 	}
@@ -89,7 +90,7 @@ func RawExtensionFromProviderSpec(spec *AlibabaCloudMachineProviderConfig) (*run
 }
 
 // RawExtensionFromProviderStatus marshals the machine provider status
-func RawExtensionFromProviderStatus(status *AlibabaCloudMachineProviderStatus) (*runtime.RawExtension, error) {
+func RawExtensionFromProviderStatus(status *machinev1.AlibabaCloudMachineProviderStatus) (*runtime.RawExtension, error) {
 	if status == nil {
 		return &runtime.RawExtension{}, nil
 	}
