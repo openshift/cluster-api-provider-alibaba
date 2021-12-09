@@ -33,6 +33,8 @@ REPO_PATH   ?= github.com/openshift/cluster-api-provider-alibaba
 LD_FLAGS    ?= -X $(REPO_PATH)/pkg/version.Raw=$(VERSION) $(shell hack/version.sh)  -extldflags "-static"
 MUTABLE_TAG ?= latest
 IMAGE        = origin-alibabacloud-machine-controllers
+BUILD_IMAGE ?= registry.ci.openshift.org/openshift/release:golang-1.17
+
 
 # race tests need CGO_ENABLED, everything else should have it disabled
 CGO_ENABLED = 0
@@ -60,7 +62,7 @@ ifeq ($(NO_DOCKER), 1)
   DOCKER_CMD =
   IMAGE_BUILD_CMD = imagebuilder
 else
-  DOCKER_CMD = $(ENGINE) run --rm -e CGO_ENABLED=$(CGO_ENABLED) -e GOARCH=$(GOARCH) -e GOOS=$(GOOS) -v "$(PWD)":/go/src/github.com/openshift/cluster-api-provider-alibaba:Z -w /go/src/github.com/openshift/cluster-api-provider-alibaba openshift/origin-release:golang-1.16
+  DOCKER_CMD = $(ENGINE) run --rm -e CGO_ENABLED=$(CGO_ENABLED) -e GOARCH=$(GOARCH) -e GOOS=$(GOOS) -v "$(PWD)":/go/src/github.com/openshift/cluster-api-provider-alibaba:Z -w /go/src/github.com/openshift/cluster-api-provider-alibaba ${BUILD_IMAGE}
   IMAGE_BUILD_CMD = $(ENGINE) build
 endif
 
