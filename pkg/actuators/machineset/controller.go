@@ -25,8 +25,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/go-logr/logr"
-	machinev1 "github.com/openshift/api/machine/v1beta1"
-	alibabacloudproviderv1 "github.com/openshift/cluster-api-provider-alibaba/pkg/apis/alibabacloudprovider/v1beta1"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	alibabacloudproviderv1 "github.com/openshift/cluster-api-provider-alibaba/pkg/apis/alibabacloudprovider/v1"
 	mapierrors "github.com/openshift/machine-api-operator/pkg/controller/machine"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -57,7 +57,7 @@ type Reconciler struct {
 // SetupWithManager creates a new controller for a manager.
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager, options controller.Options) error {
 	_, err := ctrl.NewControllerManagedBy(mgr).
-		For(&machinev1.MachineSet{}).
+		For(&machinev1beta1.MachineSet{}).
 		WithOptions(options).
 		Build(r)
 
@@ -75,7 +75,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	logger := r.Log.WithValues("machineset", request.Name, "namespace", request.Namespace)
 	logger.V(3).Info("Reconciling")
 
-	machineSet := &machinev1.MachineSet{}
+	machineSet := &machinev1beta1.MachineSet{}
 	if err := r.Client.Get(ctx, request.NamespacedName, machineSet); err != nil {
 		if apierrors.IsNotFound(err) {
 			// Object not found, return. Created objects are automatically garbage collected.
@@ -113,7 +113,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	return result, err
 }
 
-func (r *Reconciler) reconcile(machineSet *machinev1.MachineSet) (ctrl.Result, error) {
+func (r *Reconciler) reconcile(machineSet *machinev1beta1.MachineSet) (ctrl.Result, error) {
 	providerConfig, err := alibabacloudproviderv1.ProviderSpecFromRawExtension(machineSet.Spec.Template.Spec.ProviderSpec.Value)
 	if err != nil {
 		return ctrl.Result{}, mapierrors.InvalidMachineConfiguration("failed to get providerConfig: %v", err)
@@ -144,7 +144,7 @@ func (r *Reconciler) reconcile(machineSet *machinev1.MachineSet) (ctrl.Result, e
 func isInvalidConfigurationError(err error) bool {
 	switch t := err.(type) {
 	case *mapierrors.MachineError:
-		if t.Reason == machinev1.InvalidConfigurationMachineError {
+		if t.Reason == machinev1beta1.InvalidConfigurationMachineError {
 			return true
 		}
 	}

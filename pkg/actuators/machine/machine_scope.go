@@ -27,10 +27,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog"
 
-	machinev1 "github.com/openshift/api/machine/v1beta1"
-	v1beta1 "github.com/openshift/cluster-api-provider-alibaba/pkg/apis/alibabacloudprovider/v1beta1"
+	machinev1 "github.com/openshift/api/machine/v1"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+	alibabav1 "github.com/openshift/cluster-api-provider-alibaba/pkg/apis/alibabacloudprovider/v1"
 	alibabacloudClient "github.com/openshift/cluster-api-provider-alibaba/pkg/client"
 	machineapierros "github.com/openshift/machine-api-operator/pkg/controller/machine"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -43,10 +45,10 @@ type machineScope struct {
 	// api server controller runtime client
 	client runtimeclient.Client
 	// machine resource
-	machine            *machinev1.Machine
+	machine            *machinev1beta1.Machine
 	machineToBePatched runtimeclient.Patch
-	providerSpec       *v1beta1.AlibabaCloudMachineProviderConfig
-	providerStatus     *v1beta1.AlibabaCloudMachineProviderStatus
+	providerSpec       *machinev1.AlibabaCloudMachineProviderConfig
+	providerStatus     *machinev1.AlibabaCloudMachineProviderStatus
 }
 
 // machineScopeParams defines the input parameters used to create a new MachineScope.
@@ -57,19 +59,19 @@ type machineScopeParams struct {
 	// api server controller runtime client
 	client runtimeclient.Client
 	// machine resource
-	machine *machinev1.Machine
+	machine *machinev1beta1.Machine
 	// api server controller runtime client for the openshift-config-managed namespace
 	configManagedClient runtimeclient.Client
 }
 
 // newMachineScope init machineScope instance
 func newMachineScope(params machineScopeParams) (*machineScope, error) {
-	providerSpec, err := v1beta1.ProviderSpecFromRawExtension(params.machine.Spec.ProviderSpec.Value)
+	providerSpec, err := alibabav1.ProviderSpecFromRawExtension(params.machine.Spec.ProviderSpec.Value)
 	if err != nil {
 		return nil, machineapierros.InvalidMachineConfiguration("failed to get machine config: %v", err)
 	}
 
-	providerStatus, err := v1beta1.ProviderStatusFromRawExtension(params.machine.Status.ProviderStatus)
+	providerStatus, err := alibabav1.ProviderStatusFromRawExtension(params.machine.Status.ProviderStatus)
 	if err != nil {
 		return nil, machineapierros.InvalidMachineConfiguration("failed to get machine provider status: %v", err.Error())
 	}
@@ -99,7 +101,7 @@ func newMachineScope(params machineScopeParams) (*machineScope, error) {
 func (s *machineScope) patchMachine() error {
 	klog.V(3).Infof("%v: patching machine", s.machine.GetName())
 
-	providerStatus, err := v1beta1.RawExtensionFromProviderStatus(s.providerStatus)
+	providerStatus, err := alibabav1.RawExtensionFromProviderStatus(s.providerStatus)
 	if err != nil {
 		return machineapierros.InvalidMachineConfiguration("failed to get machine provider status: %v", err)
 	}
@@ -150,7 +152,7 @@ func (s *machineScope) getUserData() (string, error) {
 	return base64.StdEncoding.EncodeToString(userData), nil
 }
 
-func (s *machineScope) setProviderStatus(instance *ecs.Instance, condition v1beta1.AlibabaCloudMachineProviderCondition) error {
+func (s *machineScope) setProviderStatus(instance *ecs.Instance, condition metav1.Condition) error {
 	klog.Infof("%s: Updating status", s.machine.Name)
 
 	// assign value to providerStatus

@@ -17,9 +17,11 @@ import (
 	"fmt"
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
-	machinev1 "github.com/openshift/api/machine/v1beta1"
-	alibabacloudproviderv1 "github.com/openshift/cluster-api-provider-alibaba/pkg/apis/alibabacloudprovider/v1beta1"
+	machinev1 "github.com/openshift/api/machine/v1"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
+
 	alibabacloudClient "github.com/openshift/cluster-api-provider-alibaba/pkg/client"
+
 	"k8s.io/klog"
 )
 
@@ -31,7 +33,7 @@ type instanceType struct {
 }
 
 // Check whether instanceType is correct, and return the corresponding CPU, MEM, and GPU data
-func (r *Reconciler) getInstanceType(machineSet *machinev1.MachineSet, providerSpec *alibabacloudproviderv1.AlibabaCloudMachineProviderConfig) (*instanceType, error) {
+func (r *Reconciler) getInstanceType(machineSet *machinev1beta1.MachineSet, providerSpec *machinev1.AlibabaCloudMachineProviderConfig) (*instanceType, error) {
 	credentialsSecretName := ""
 	if providerSpec.CredentialsSecret != nil {
 		credentialsSecretName = providerSpec.CredentialsSecret.Name

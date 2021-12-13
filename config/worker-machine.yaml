@@ -12,7 +12,7 @@ spec:
       node-role.kubernetes.io/infra: ""
   providerSpec:
     value:
-      apiVersion: alicloudproviderconfig.openshift.io/v1alpha1
+      apiVersion: alicloudproviderconfig.openshift.io/v1
       kind: AlibabaCloudMachineProviderConfig
       instanceType: FILLIN
       imageId: FILLIN

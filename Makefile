@@ -92,7 +92,7 @@ controller-gen: ## Download controller-gen locally if necessary.
 
 
 deepcopy: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt",year=2021 paths="./pkg/apis/alibabacloudprovider/v1beta1/."
+	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt",year=2021 paths="./pkg/apis/alibabacloudprovider/v1/."
 
 
 .PHONY: build

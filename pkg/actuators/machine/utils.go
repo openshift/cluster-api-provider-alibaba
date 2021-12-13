@@ -5,9 +5,7 @@ import (
 	"time"
 
 	machinev1 "github.com/openshift/api/machine/v1beta1"
-	alibabacloudproviderv1 "github.com/openshift/cluster-api-provider-alibaba/pkg/apis/alibabacloudprovider/v1beta1"
 	machinecontroller "github.com/openshift/machine-api-operator/pkg/controller/machine"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog"
 )
@@ -45,20 +43,21 @@ func getClusterID(machine *machinev1.Machine) (string, bool) {
 	return clusterID, ok
 }
 
-func conditionSuccess() alibabacloudproviderv1.AlibabaCloudMachineProviderCondition {
-	return alibabacloudproviderv1.AlibabaCloudMachineProviderCondition{
-		Type:    alibabacloudproviderv1.MachineCreation,
-		Status:  corev1.ConditionTrue,
-		Reason:  alibabacloudproviderv1.MachineCreationSucceeded,
+func conditionSuccess() metav1.Condition {
+	return metav1.Condition{
+
+		Type:    string(machinev1.MachineCreation),
+		Status:  metav1.ConditionTrue,
+		Reason:  machinev1.MachineCreationSucceededConditionReason,
 		Message: "Machine successfully created",
 	}
 }
 
-func conditionFailed() alibabacloudproviderv1.AlibabaCloudMachineProviderCondition {
-	return alibabacloudproviderv1.AlibabaCloudMachineProviderCondition{
-		Type:   alibabacloudproviderv1.MachineCreation,
-		Status: corev1.ConditionFalse,
-		Reason: alibabacloudproviderv1.MachineCreationFailed,
+func conditionFailed() metav1.Condition {
+	return metav1.Condition{
+		Type:   string(machinev1.MachineCreation),
+		Status: metav1.ConditionFalse,
+		Reason: machinev1.MachineCreationFailedConditionReason,
 	}
 }
 
@@ -68,11 +67,11 @@ func conditionFailed() alibabacloudproviderv1.AlibabaCloudMachineProviderConditi
 // a condition will be added to the slice
 // If the machine does already have a condition with the specified type,
 // the condition will be updated if either of the following are true.
-func setMachineProviderCondition(condition alibabacloudproviderv1.AlibabaCloudMachineProviderCondition, conditions []alibabacloudproviderv1.AlibabaCloudMachineProviderCondition) []alibabacloudproviderv1.AlibabaCloudMachineProviderCondition {
+func setMachineProviderCondition(condition metav1.Condition, conditions []metav1.Condition) []metav1.Condition {
 	now := metav1.Now()
 
-	if existingCondition := findProviderCondition(conditions, condition.Type); existingCondition == nil {
-		condition.LastProbeTime = now
+	if existingCondition := findProviderCondition(conditions, machinev1.ConditionType(condition.Type)); existingCondition == nil {
+		// condition.LastProbeTime = now
 		condition.LastTransitionTime = now
 		conditions = append(conditions, condition)
 	} else {
@@ -82,16 +81,16 @@ func setMachineProviderCondition(condition alibabacloudproviderv1.AlibabaCloudMa
 	return conditions
 }
 
-func findProviderCondition(conditions []alibabacloudproviderv1.AlibabaCloudMachineProviderCondition, conditionType alibabacloudproviderv1.AlibabaCloudMachineProviderConditionType) *alibabacloudproviderv1.AlibabaCloudMachineProviderCondition {
+func findProviderCondition(conditions []metav1.Condition, conditionType machinev1.ConditionType) *metav1.Condition {
 	for i := range conditions {
-		if conditions[i].Type == conditionType {
+		if conditions[i].Type == string(conditionType) {
 			return &conditions[i]
 		}
 	}
 	return nil
 }
 
-func updateExistingCondition(newCondition, existingCondition *alibabacloudproviderv1.AlibabaCloudMachineProviderCondition) {
+func updateExistingCondition(newCondition, existingCondition *metav1.Condition) {
 	if !shouldUpdateCondition(newCondition, existingCondition) {
 		return
 	}
@@ -102,10 +101,10 @@ func updateExistingCondition(newCondition, existingCondition *alibabacloudprovid
 	existingCondition.Status = newCondition.Status
 	existingCondition.Reason = newCondition.Reason
 	existingCondition.Message = newCondition.Message
-	existingCondition.LastProbeTime = newCondition.LastProbeTime
+	// existingCondition.LastProbeTime = newCondition.LastProbeTime
 }
 
-func shouldUpdateCondition(newCondition, existingCondition *alibabacloudproviderv1.AlibabaCloudMachineProviderCondition) bool {
+func shouldUpdateCondition(newCondition, existingCondition *metav1.Condition) bool {
 	return newCondition.Reason != existingCondition.Reason || newCondition.Message != existingCondition.Message
 }
 
