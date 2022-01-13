@@ -57,16 +57,23 @@ func stubAlibabaCloudCredentialsSecret() *corev1.Secret {
 }
 
 func stubProviderConfig() *machinev1.AlibabaCloudMachineProviderConfig {
+	vSwitchID := stubVSwitchID
 	return &machinev1.AlibabaCloudMachineProviderConfig{
 		InstanceType: stubInstanceType,
 		ImageID:      stubImageID,
 		RegionID:     stubRegionID,
 		ZoneID:       stubZoneID,
 		SecurityGroups: []machinev1.AlibabaResourceReference{
-			{ID: stubVSwitchID},
+			{
+				Type: machinev1.AlibabaResourceReferenceTypeID,
+				ID:   &vSwitchID,
+			},
 		},
-		VpcID:   stubVpcID,
-		VSwitch: machinev1.AlibabaResourceReference{ID: stubVSwitchID},
+		VpcID: stubVpcID,
+		VSwitch: machinev1.AlibabaResourceReference{
+			Type: machinev1.AlibabaResourceReferenceTypeID,
+			ID:   &vSwitchID,
+		},
 		SystemDisk: machinev1.SystemDiskProperties{
 			Category: stubSystemDiskCategory,
 			Size:     stubSystemDiskSize,

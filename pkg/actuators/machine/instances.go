@@ -115,8 +115,11 @@ func runInstances(machine *machinev1beta1.Machine, machineProviderConfig *machin
 	runInstancesRequest.RegionId = machineProviderConfig.RegionID
 
 	// ResourceGroupID
-	if machineProviderConfig.ResourceGroupID != "" {
-		runInstancesRequest.ResourceGroupId = machineProviderConfig.ResourceGroupID
+	if groupId, err := getResourceGroupId(machineProviderConfig); err != nil {
+		klog.Errorf("Unable to determine resource group ID for machine %q, err %q", machine.Name, err)
+		return nil, mapierrors.InvalidMachineConfiguration("Unable to determine resource group ID for machine: %q", machine.Name)
+	} else {
+		runInstancesRequest.ResourceGroupId = groupId
 	}
 
 	// SecurityGroupIDs
@@ -367,16 +370,21 @@ func getSecurityGroupIDs(machine runtimeclient.ObjectKey, machineProviderConfig 
 	}
 
 	for _, sg := range machineProviderConfig.SecurityGroups {
-		if sg.ID != "" {
-			securityGroupIDs = append(securityGroupIDs, sg.ID)
-		} else {
-			if sg.Tags != nil {
-				ids, err := getSecurityGroupIDByTags(machine, machineProviderConfig, sg.Tags, client)
-				if err != nil {
-					return nil, err
-				}
-				securityGroupIDs = append(securityGroupIDs, ids...)
+		switch sg.Type {
+		case machinev1.AlibabaResourceReferenceTypeID:
+			if sg.ID != nil && *sg.ID != "" {
+				securityGroupIDs = append(securityGroupIDs, *sg.ID)
+			} else {
+				return nil, mapierrors.InvalidMachineConfiguration("No security group ID provided")
 			}
+		case machinev1.AlibabaResourceReferenceTypeTags:
+			ids, err := getSecurityGroupIDByTags(machine, machineProviderConfig, sg.Tags, client)
+			if err != nil {
+				return nil, err
+			}
+			securityGroupIDs = append(securityGroupIDs, ids...)
+		default:
+			return nil, mapierrors.InvalidMachineConfiguration("Unknown security group resource reference type: %s", sg.Type)
 		}
 	}
 	if len(securityGroupIDs) == 0 {
@@ -385,12 +393,20 @@ func getSecurityGroupIDs(machine runtimeclient.ObjectKey, machineProviderConfig 
 	return &securityGroupIDs, nil
 }
 
-func getSecurityGroupIDByTags(machine runtimeclient.ObjectKey, machineProviderConfig *machinev1.AlibabaCloudMachineProviderConfig, tags []machinev1.Tag, client alibabacloudClient.Client) ([]string, error) {
+func getSecurityGroupIDByTags(machine runtimeclient.ObjectKey, machineProviderConfig *machinev1.AlibabaCloudMachineProviderConfig, tags *[]machinev1.Tag, client alibabacloudClient.Client) ([]string, error) {
+	if tags == nil {
+		return nil, mapierrors.InvalidMachineConfiguration("No tags provided for security group ID search for machine: %q", machine.Name)
+	}
 	request := ecs.CreateDescribeSecurityGroupsRequest()
 	request.VpcId = machineProviderConfig.VpcID
-	request.ResourceGroupId = machineProviderConfig.ResourceGroupID
+	if groupId, err := getResourceGroupId(machineProviderConfig); err != nil {
+		klog.Errorf("Unable to determine resource group ID for machine %q, err %q", machine.Name, err)
+		return nil, mapierrors.InvalidMachineConfiguration("Unable to determine resource group ID for machine: %q", machine.Name)
+	} else {
+		request.ResourceGroupId = groupId
+	}
 	request.RegionId = machineProviderConfig.RegionID
-	request.Tag = buildDescribeSecurityGroupsTag(tags)
+	request.Tag = buildDescribeSecurityGroupsTag(*tags)
 	request.Scheme = "https"
 
 	response, err := client.DescribeSecurityGroups(request)
@@ -440,28 +456,30 @@ func buildDescribeSecurityGroupsTag(tags []machinev1.Tag) *[]ecs.DescribeSecurit
 
 func getVSwitchID(machine runtimeclient.ObjectKey, machineProviderConfig *machinev1.AlibabaCloudMachineProviderConfig, client alibabacloudClient.Client) (string, error) {
 	klog.Infof("validate vswitch in region %s", machineProviderConfig.RegionID)
-	if machineProviderConfig.VSwitch.ID == "" && len(machineProviderConfig.VSwitch.Tags) == 0 {
-		return "", errors.New("no vswitch configuration provided")
-	}
-
-	if machineProviderConfig.VSwitch.ID != "" {
-		return machineProviderConfig.VSwitch.ID, nil
-	}
-
-	if machineProviderConfig.VSwitch.Tags != nil {
+	switch machineProviderConfig.VSwitch.Type {
+	case machinev1.AlibabaResourceReferenceTypeID:
+		if machineProviderConfig.VSwitch.ID != nil && *machineProviderConfig.VSwitch.ID != "" {
+			return *machineProviderConfig.VSwitch.ID, nil
+		} else {
+			return "", mapierrors.InvalidMachineConfiguration("No vswitch resource id provided")
+		}
+	case machinev1.AlibabaResourceReferenceTypeTags:
 		return getVSwitchIDFromTags(machine, machineProviderConfig, client)
+	default:
+		return "", mapierrors.InvalidMachineConfiguration("Unknown vswitch resource reference type: %s", machineProviderConfig.VSwitch.Type)
 	}
-
-	return "", fmt.Errorf("no vSwitch found from configuration")
 }
 
 func getVSwitchIDFromTags(machine runtimeclient.ObjectKey, mpc *machinev1.AlibabaCloudMachineProviderConfig, client alibabacloudClient.Client) (string, error) {
+	if mpc.VSwitch.Tags == nil {
+		return "", mapierrors.InvalidMachineConfiguration("No tags provided for VSwitch ID search for machine: %q", machine.Name)
+	}
 	// Build a request to fetch the vSwitchID from the tags provided
 	describeVSwitchesRequest := vpc.CreateDescribeVSwitchesRequest()
 	describeVSwitchesRequest.Scheme = "https"
 	describeVSwitchesRequest.RegionId = mpc.RegionID
 	describeVSwitchesRequest.VpcId = mpc.VpcID
-	describeVSwitchesRequest.Tag = buildDescribeVSwitchesTag(mpc.VSwitch.Tags)
+	describeVSwitchesRequest.Tag = buildDescribeVSwitchesTag(*mpc.VSwitch.Tags)
 	describeVSwitchesResponse, err := client.DescribeVSwitches(describeVSwitchesRequest)
 	if err != nil {
 		metrics.RegisterFailedInstanceCreate(&metrics.MachineLabels{
@@ -800,4 +818,22 @@ func correctExistingTags(machine *machinev1beta1.Machine, regionID string, insta
 	}
 
 	return nil
+}
+
+// getResourceGroupId takes an AlibabaCloudMachineProviderConfig and will return the
+// resource group id if available, or determine the group id by using the search tags.
+// An error will be returned if no group id can be found, or if multiple groups are
+// found from the search tags.
+func getResourceGroupId(machineProviderConfig *machinev1.AlibabaCloudMachineProviderConfig) (string, error) {
+	switch machineProviderConfig.ResourceGroup.Type {
+	case machinev1.AlibabaResourceReferenceTypeID:
+		if machineProviderConfig.ResourceGroup.ID != nil && *machineProviderConfig.ResourceGroup.ID != "" {
+			return *machineProviderConfig.ResourceGroup.ID, nil
+		} else {
+			return "", mapierrors.InvalidMachineConfiguration("No resource group ID provided")
+		}
+		// TODO add name search lookup case here
+	default:
+		return "", mapierrors.InvalidMachineConfiguration("unknown resource group reference type: %s", machineProviderConfig.ResourceGroup.Type)
+	}
 }
