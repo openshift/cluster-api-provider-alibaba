@@ -14,6 +14,7 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials/provider"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
+	"github.com/aliyun/alibaba-cloud-sdk-go/services/resourcemanager"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/slb"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/vpc"
 	"github.com/openshift/cluster-api-provider-alibaba/pkg/version"
@@ -170,12 +171,16 @@ type Client interface {
 	DeleteVServerGroup(*slb.DeleteVServerGroupRequest) (*slb.DeleteVServerGroupResponse, error)
 	DescribeVServerGroups(*slb.DescribeVServerGroupsRequest) (*slb.DescribeVServerGroupsResponse, error)
 	DescribeVServerGroupAttribute(*slb.DescribeVServerGroupAttributeRequest) (*slb.DescribeVServerGroupAttributeResponse, error)
+
+	// ResourceGroups
+	ListResourceGroups(*resourcemanager.ListResourceGroupsRequest) (*resourcemanager.ListResourceGroupsResponse, error)
 }
 
 type alibabacloudClient struct {
 	ecsClient *ecs.Client
 	vpcClient *vpc.Client
 	slbClient *slb.Client
+	rmClient  *resourcemanager.Client
 }
 
 func (client *alibabacloudClient) RunInstances(request *ecs.RunInstancesRequest) (*ecs.RunInstancesResponse, error) {
@@ -574,6 +579,10 @@ func (client *alibabacloudClient) DescribeVServerGroupAttribute(request *slb.Des
 	return client.slbClient.DescribeVServerGroupAttribute(request)
 }
 
+func (client *alibabacloudClient) ListResourceGroups(request *resourcemanager.ListResourceGroupsRequest) (*resourcemanager.ListResourceGroupsResponse, error) {
+	return client.rmClient.ListResourceGroups(request)
+}
+
 // NewClient creates our client wrapper object for the actual alibabacloud clients we use.
 func NewClient(ctrlRuntimeClient client.Client, secretName, namespace, regionID string, configManagedClient client.Client) (Client, error) {
 	credential, err := getCredentialFromSecret(ctrlRuntimeClient, secretName, namespace, configManagedClient)
@@ -606,10 +615,18 @@ func NewClient(ctrlRuntimeClient client.Client, secretName, namespace, regionID 
 		return nil, err
 	}
 
+	//init rmClient
+	rmClient, err := resourcemanager.NewClientWithOptions(regionID, sdkConfig, credential)
+	if err != nil {
+		klog.Errorf("failed to init resourcemanager client %v", err)
+		return nil, err
+	}
+
 	return &alibabacloudClient{
 		ecsClient: ecsClient,
 		vpcClient: vpcClient,
 		slbClient: slbClient,
+		rmClient:  rmClient,
 	}, nil
 }
 

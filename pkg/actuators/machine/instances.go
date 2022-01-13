@@ -25,8 +25,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aliyun/alibaba-cloud-sdk-go/services/vpc"
+	"github.com/aliyun/alibaba-cloud-sdk-go/services/resourcemanager"
 
+	sdkerrors "github.com/aliyun/alibaba-cloud-sdk-go/sdk/errors"
+	"github.com/aliyun/alibaba-cloud-sdk-go/services/vpc"
 	"k8s.io/klog"
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
@@ -88,6 +90,14 @@ func runInstances(machine *machinev1beta1.Machine, machineProviderConfig *machin
 		return nil, mapierrors.InvalidMachineConfiguration("error getting ImageID: %v", err)
 	}
 
+	// ResourceGroupID
+	resourceGroupID, err := getResourceGroupID(machineKey, machineProviderConfig, client)
+	if err != nil {
+		return nil, mapierrors.InvalidMachineConfiguration("error getting resourceGroup ID: %v", err)
+	}
+	// Reset resourceGroupID
+	machineProviderConfig.ResourceGroupID = resourceGroupID
+
 	// SecurgityGroupIds
 	securityGroupIDs, err := getSecurityGroupIDs(machineKey, machineProviderConfig, client)
 	if err != nil {
@@ -115,9 +125,7 @@ func runInstances(machine *machinev1beta1.Machine, machineProviderConfig *machin
 	runInstancesRequest.RegionId = machineProviderConfig.RegionID
 
 	// ResourceGroupID
-	if machineProviderConfig.ResourceGroupID != "" {
-		runInstancesRequest.ResourceGroupId = machineProviderConfig.ResourceGroupID
-	}
+	runInstancesRequest.ResourceGroupId = resourceGroupID
 
 	// SecurityGroupIDs
 	runInstancesRequest.SecurityGroupIds = securityGroupIDs
@@ -355,6 +363,41 @@ func getImageID(machine runtimeclient.ObjectKey, machineProviderConfig *machinev
 	}
 
 	return image.ImageId, nil
+}
+
+func getResourceGroupID(machine runtimeclient.ObjectKey, machineProviderConfig *machinev1.AlibabaCloudMachineProviderConfig, client alibabacloudClient.Client) (string, error) {
+	klog.Infof("%s validate resource group in region %s", machineProviderConfig.ResourceGroupID, machineProviderConfig.RegionID)
+	if len(machineProviderConfig.ResourceGroupID) == 0 {
+		return "", nil
+	}
+
+	request := resourcemanager.CreateListResourceGroupsRequest()
+	request.QueryParams = map[string]string{
+		"ResourceGroupId": machineProviderConfig.ResourceGroupID,
+	}
+	request.RegionId = machineProviderConfig.RegionID
+	request.Scheme = "https"
+
+	response, err := client.ListResourceGroups(request)
+	if sdkErr, ok := err.(*sdkerrors.ServerError); ok {
+		// If resourceGroup not found, query by Name
+		if sdkErr.ErrorCode() == "InvalidParameter.ResourceGroupId" {
+			request.QueryParams = map[string]string{
+				"Name": machineProviderConfig.ResourceGroupID,
+			}
+			response, err = client.ListResourceGroups(request)
+		}
+	}
+
+	if err != nil {
+		klog.Errorf("error list resourcegroups: %v", err)
+		return "", fmt.Errorf("error  list resourcegroups  by id/name %s: %v", machineProviderConfig.ResourceGroupID, err)
+	}
+
+	if len(response.ResourceGroups.ResourceGroup) == 0 {
+		return "", errors.New("no resourcegroup  provided")
+	}
+	return response.ResourceGroups.ResourceGroup[0].Id, nil
 }
 
 func getSecurityGroupIDs(machine runtimeclient.ObjectKey, machineProviderConfig *machinev1.AlibabaCloudMachineProviderConfig, client alibabacloudClient.Client) (*[]string, error) {
