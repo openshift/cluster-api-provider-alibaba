@@ -1,4 +1,4 @@
-package ecs
+package vpc
 
 //Licensed under the Apache License, Version 2.0 (the "License");
 //you may not use this file except in compliance with the License.
@@ -20,21 +20,21 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/responses"
 )
 
-// StartDiskReplicaPair invokes the ecs.StartDiskReplicaPair API synchronously
-func (client *Client) StartDiskReplicaPair(request *StartDiskReplicaPairRequest) (response *StartDiskReplicaPairResponse, err error) {
-	response = CreateStartDiskReplicaPairResponse()
+// DeleteNatIp invokes the vpc.DeleteNatIp API synchronously
+func (client *Client) DeleteNatIp(request *DeleteNatIpRequest) (response *DeleteNatIpResponse, err error) {
+	response = CreateDeleteNatIpResponse()
 	err = client.DoAction(request, response)
 	return
 }
 
-// StartDiskReplicaPairWithChan invokes the ecs.StartDiskReplicaPair API asynchronously
-func (client *Client) StartDiskReplicaPairWithChan(request *StartDiskReplicaPairRequest) (<-chan *StartDiskReplicaPairResponse, <-chan error) {
-	responseChan := make(chan *StartDiskReplicaPairResponse, 1)
+// DeleteNatIpWithChan invokes the vpc.DeleteNatIp API asynchronously
+func (client *Client) DeleteNatIpWithChan(request *DeleteNatIpRequest) (<-chan *DeleteNatIpResponse, <-chan error) {
+	responseChan := make(chan *DeleteNatIpResponse, 1)
 	errChan := make(chan error, 1)
 	err := client.AddAsyncTask(func() {
 		defer close(responseChan)
 		defer close(errChan)
-		response, err := client.StartDiskReplicaPair(request)
+		response, err := client.DeleteNatIp(request)
 		if err != nil {
 			errChan <- err
 		} else {
@@ -49,14 +49,14 @@ func (client *Client) StartDiskReplicaPairWithChan(request *StartDiskReplicaPair
 	return responseChan, errChan
 }
 
-// StartDiskReplicaPairWithCallback invokes the ecs.StartDiskReplicaPair API asynchronously
-func (client *Client) StartDiskReplicaPairWithCallback(request *StartDiskReplicaPairRequest, callback func(response *StartDiskReplicaPairResponse, err error)) <-chan int {
+// DeleteNatIpWithCallback invokes the vpc.DeleteNatIp API asynchronously
+func (client *Client) DeleteNatIpWithCallback(request *DeleteNatIpRequest, callback func(response *DeleteNatIpResponse, err error)) <-chan int {
 	result := make(chan int, 1)
 	err := client.AddAsyncTask(func() {
-		var response *StartDiskReplicaPairResponse
+		var response *DeleteNatIpResponse
 		var err error
 		defer close(result)
-		response, err = client.StartDiskReplicaPair(request)
+		response, err = client.DeleteNatIp(request)
 		callback(response, err)
 		result <- 1
 	})
@@ -68,35 +68,37 @@ func (client *Client) StartDiskReplicaPairWithCallback(request *StartDiskReplica
 	return result
 }
 
-// StartDiskReplicaPairRequest is the request struct for api StartDiskReplicaPair
-type StartDiskReplicaPairRequest struct {
+// DeleteNatIpRequest is the request struct for api DeleteNatIp
+type DeleteNatIpRequest struct {
 	*requests.RpcRequest
 	ResourceOwnerId      requests.Integer `position:"Query" name:"ResourceOwnerId"`
+	ClientToken          string           `position:"Query" name:"ClientToken"`
+	DryRun               requests.Boolean `position:"Query" name:"DryRun"`
+	NatIpId              string           `position:"Query" name:"NatIpId"`
 	ResourceOwnerAccount string           `position:"Query" name:"ResourceOwnerAccount"`
 	OwnerAccount         string           `position:"Query" name:"OwnerAccount"`
 	OwnerId              requests.Integer `position:"Query" name:"OwnerId"`
-	ReplicaPairId        string           `position:"Query" name:"ReplicaPairId"`
 }
 
-// StartDiskReplicaPairResponse is the response struct for api StartDiskReplicaPair
-type StartDiskReplicaPairResponse struct {
+// DeleteNatIpResponse is the response struct for api DeleteNatIp
+type DeleteNatIpResponse struct {
 	*responses.BaseResponse
 	RequestId string `json:"RequestId" xml:"RequestId"`
 }
 
-// CreateStartDiskReplicaPairRequest creates a request to invoke StartDiskReplicaPair API
-func CreateStartDiskReplicaPairRequest() (request *StartDiskReplicaPairRequest) {
-	request = &StartDiskReplicaPairRequest{
+// CreateDeleteNatIpRequest creates a request to invoke DeleteNatIp API
+func CreateDeleteNatIpRequest() (request *DeleteNatIpRequest) {
+	request = &DeleteNatIpRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ecs", "2014-05-26", "StartDiskReplicaPair", "ecs", "openAPI")
+	request.InitWithApiInfo("Vpc", "2016-04-28", "DeleteNatIp", "vpc", "openAPI")
 	request.Method = requests.POST
 	return
 }
 
-// CreateStartDiskReplicaPairResponse creates a response to parse from StartDiskReplicaPair response
-func CreateStartDiskReplicaPairResponse() (response *StartDiskReplicaPairResponse) {
-	response = &StartDiskReplicaPairResponse{
+// CreateDeleteNatIpResponse creates a response to parse from DeleteNatIp response
+func CreateDeleteNatIpResponse() (response *DeleteNatIpResponse) {
+	response = &DeleteNatIpResponse{
 		BaseResponse: &responses.BaseResponse{},
 	}
 	return

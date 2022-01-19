@@ -1,4 +1,4 @@
-package ecs
+package vpc
 
 //Licensed under the Apache License, Version 2.0 (the "License");
 //you may not use this file except in compliance with the License.
@@ -20,21 +20,21 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/responses"
 )
 
-// StopDiskReplicaPair invokes the ecs.StopDiskReplicaPair API synchronously
-func (client *Client) StopDiskReplicaPair(request *StopDiskReplicaPairRequest) (response *StopDiskReplicaPairResponse, err error) {
-	response = CreateStopDiskReplicaPairResponse()
+// DeleteNatIpCidr invokes the vpc.DeleteNatIpCidr API synchronously
+func (client *Client) DeleteNatIpCidr(request *DeleteNatIpCidrRequest) (response *DeleteNatIpCidrResponse, err error) {
+	response = CreateDeleteNatIpCidrResponse()
 	err = client.DoAction(request, response)
 	return
 }
 
-// StopDiskReplicaPairWithChan invokes the ecs.StopDiskReplicaPair API asynchronously
-func (client *Client) StopDiskReplicaPairWithChan(request *StopDiskReplicaPairRequest) (<-chan *StopDiskReplicaPairResponse, <-chan error) {
-	responseChan := make(chan *StopDiskReplicaPairResponse, 1)
+// DeleteNatIpCidrWithChan invokes the vpc.DeleteNatIpCidr API asynchronously
+func (client *Client) DeleteNatIpCidrWithChan(request *DeleteNatIpCidrRequest) (<-chan *DeleteNatIpCidrResponse, <-chan error) {
+	responseChan := make(chan *DeleteNatIpCidrResponse, 1)
 	errChan := make(chan error, 1)
 	err := client.AddAsyncTask(func() {
 		defer close(responseChan)
 		defer close(errChan)
-		response, err := client.StopDiskReplicaPair(request)
+		response, err := client.DeleteNatIpCidr(request)
 		if err != nil {
 			errChan <- err
 		} else {
@@ -49,14 +49,14 @@ func (client *Client) StopDiskReplicaPairWithChan(request *StopDiskReplicaPairRe
 	return responseChan, errChan
 }
 
-// StopDiskReplicaPairWithCallback invokes the ecs.StopDiskReplicaPair API asynchronously
-func (client *Client) StopDiskReplicaPairWithCallback(request *StopDiskReplicaPairRequest, callback func(response *StopDiskReplicaPairResponse, err error)) <-chan int {
+// DeleteNatIpCidrWithCallback invokes the vpc.DeleteNatIpCidr API asynchronously
+func (client *Client) DeleteNatIpCidrWithCallback(request *DeleteNatIpCidrRequest, callback func(response *DeleteNatIpCidrResponse, err error)) <-chan int {
 	result := make(chan int, 1)
 	err := client.AddAsyncTask(func() {
-		var response *StopDiskReplicaPairResponse
+		var response *DeleteNatIpCidrResponse
 		var err error
 		defer close(result)
-		response, err = client.StopDiskReplicaPair(request)
+		response, err = client.DeleteNatIpCidr(request)
 		callback(response, err)
 		result <- 1
 	})
@@ -68,35 +68,38 @@ func (client *Client) StopDiskReplicaPairWithCallback(request *StopDiskReplicaPa
 	return result
 }
 
-// StopDiskReplicaPairRequest is the request struct for api StopDiskReplicaPair
-type StopDiskReplicaPairRequest struct {
+// DeleteNatIpCidrRequest is the request struct for api DeleteNatIpCidr
+type DeleteNatIpCidrRequest struct {
 	*requests.RpcRequest
 	ResourceOwnerId      requests.Integer `position:"Query" name:"ResourceOwnerId"`
+	ClientToken          string           `position:"Query" name:"ClientToken"`
+	NatGatewayId         string           `position:"Query" name:"NatGatewayId"`
+	DryRun               requests.Boolean `position:"Query" name:"DryRun"`
 	ResourceOwnerAccount string           `position:"Query" name:"ResourceOwnerAccount"`
 	OwnerAccount         string           `position:"Query" name:"OwnerAccount"`
 	OwnerId              requests.Integer `position:"Query" name:"OwnerId"`
-	ReplicaPairId        string           `position:"Query" name:"ReplicaPairId"`
+	NatIpCidr            string           `position:"Query" name:"NatIpCidr"`
 }
 
-// StopDiskReplicaPairResponse is the response struct for api StopDiskReplicaPair
-type StopDiskReplicaPairResponse struct {
+// DeleteNatIpCidrResponse is the response struct for api DeleteNatIpCidr
+type DeleteNatIpCidrResponse struct {
 	*responses.BaseResponse
 	RequestId string `json:"RequestId" xml:"RequestId"`
 }
 
-// CreateStopDiskReplicaPairRequest creates a request to invoke StopDiskReplicaPair API
-func CreateStopDiskReplicaPairRequest() (request *StopDiskReplicaPairRequest) {
-	request = &StopDiskReplicaPairRequest{
+// CreateDeleteNatIpCidrRequest creates a request to invoke DeleteNatIpCidr API
+func CreateDeleteNatIpCidrRequest() (request *DeleteNatIpCidrRequest) {
+	request = &DeleteNatIpCidrRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ecs", "2014-05-26", "StopDiskReplicaPair", "ecs", "openAPI")
+	request.InitWithApiInfo("Vpc", "2016-04-28", "DeleteNatIpCidr", "vpc", "openAPI")
 	request.Method = requests.POST
 	return
 }
 
-// CreateStopDiskReplicaPairResponse creates a response to parse from StopDiskReplicaPair response
-func CreateStopDiskReplicaPairResponse() (response *StopDiskReplicaPairResponse) {
-	response = &StopDiskReplicaPairResponse{
+// CreateDeleteNatIpCidrResponse creates a response to parse from DeleteNatIpCidr response
+func CreateDeleteNatIpCidrResponse() (response *DeleteNatIpCidrResponse) {
+	response = &DeleteNatIpCidrResponse{
 		BaseResponse: &responses.BaseResponse{},
 	}
 	return
