@@ -1,4 +1,4 @@
-package ecs
+package vpc
 
 //Licensed under the Apache License, Version 2.0 (the "License");
 //you may not use this file except in compliance with the License.
@@ -20,21 +20,21 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/responses"
 )
 
-// DeleteDiskReplicaPair invokes the ecs.DeleteDiskReplicaPair API synchronously
-func (client *Client) DeleteDiskReplicaPair(request *DeleteDiskReplicaPairRequest) (response *DeleteDiskReplicaPairResponse, err error) {
-	response = CreateDeleteDiskReplicaPairResponse()
+// DeleteIpv4Gateway invokes the vpc.DeleteIpv4Gateway API synchronously
+func (client *Client) DeleteIpv4Gateway(request *DeleteIpv4GatewayRequest) (response *DeleteIpv4GatewayResponse, err error) {
+	response = CreateDeleteIpv4GatewayResponse()
 	err = client.DoAction(request, response)
 	return
 }
 
-// DeleteDiskReplicaPairWithChan invokes the ecs.DeleteDiskReplicaPair API asynchronously
-func (client *Client) DeleteDiskReplicaPairWithChan(request *DeleteDiskReplicaPairRequest) (<-chan *DeleteDiskReplicaPairResponse, <-chan error) {
-	responseChan := make(chan *DeleteDiskReplicaPairResponse, 1)
+// DeleteIpv4GatewayWithChan invokes the vpc.DeleteIpv4Gateway API asynchronously
+func (client *Client) DeleteIpv4GatewayWithChan(request *DeleteIpv4GatewayRequest) (<-chan *DeleteIpv4GatewayResponse, <-chan error) {
+	responseChan := make(chan *DeleteIpv4GatewayResponse, 1)
 	errChan := make(chan error, 1)
 	err := client.AddAsyncTask(func() {
 		defer close(responseChan)
 		defer close(errChan)
-		response, err := client.DeleteDiskReplicaPair(request)
+		response, err := client.DeleteIpv4Gateway(request)
 		if err != nil {
 			errChan <- err
 		} else {
@@ -49,14 +49,14 @@ func (client *Client) DeleteDiskReplicaPairWithChan(request *DeleteDiskReplicaPa
 	return responseChan, errChan
 }
 
-// DeleteDiskReplicaPairWithCallback invokes the ecs.DeleteDiskReplicaPair API asynchronously
-func (client *Client) DeleteDiskReplicaPairWithCallback(request *DeleteDiskReplicaPairRequest, callback func(response *DeleteDiskReplicaPairResponse, err error)) <-chan int {
+// DeleteIpv4GatewayWithCallback invokes the vpc.DeleteIpv4Gateway API asynchronously
+func (client *Client) DeleteIpv4GatewayWithCallback(request *DeleteIpv4GatewayRequest, callback func(response *DeleteIpv4GatewayResponse, err error)) <-chan int {
 	result := make(chan int, 1)
 	err := client.AddAsyncTask(func() {
-		var response *DeleteDiskReplicaPairResponse
+		var response *DeleteIpv4GatewayResponse
 		var err error
 		defer close(result)
-		response, err = client.DeleteDiskReplicaPair(request)
+		response, err = client.DeleteIpv4Gateway(request)
 		callback(response, err)
 		result <- 1
 	})
@@ -68,35 +68,37 @@ func (client *Client) DeleteDiskReplicaPairWithCallback(request *DeleteDiskRepli
 	return result
 }
 
-// DeleteDiskReplicaPairRequest is the request struct for api DeleteDiskReplicaPair
-type DeleteDiskReplicaPairRequest struct {
+// DeleteIpv4GatewayRequest is the request struct for api DeleteIpv4Gateway
+type DeleteIpv4GatewayRequest struct {
 	*requests.RpcRequest
 	ResourceOwnerId      requests.Integer `position:"Query" name:"ResourceOwnerId"`
+	ClientToken          string           `position:"Query" name:"ClientToken"`
+	Ipv4GatewayId        string           `position:"Query" name:"Ipv4GatewayId"`
+	DryRun               requests.Boolean `position:"Query" name:"DryRun"`
 	ResourceOwnerAccount string           `position:"Query" name:"ResourceOwnerAccount"`
 	OwnerAccount         string           `position:"Query" name:"OwnerAccount"`
 	OwnerId              requests.Integer `position:"Query" name:"OwnerId"`
-	ReplicaPairId        string           `position:"Query" name:"ReplicaPairId"`
 }
 
-// DeleteDiskReplicaPairResponse is the response struct for api DeleteDiskReplicaPair
-type DeleteDiskReplicaPairResponse struct {
+// DeleteIpv4GatewayResponse is the response struct for api DeleteIpv4Gateway
+type DeleteIpv4GatewayResponse struct {
 	*responses.BaseResponse
 	RequestId string `json:"RequestId" xml:"RequestId"`
 }
 
-// CreateDeleteDiskReplicaPairRequest creates a request to invoke DeleteDiskReplicaPair API
-func CreateDeleteDiskReplicaPairRequest() (request *DeleteDiskReplicaPairRequest) {
-	request = &DeleteDiskReplicaPairRequest{
+// CreateDeleteIpv4GatewayRequest creates a request to invoke DeleteIpv4Gateway API
+func CreateDeleteIpv4GatewayRequest() (request *DeleteIpv4GatewayRequest) {
+	request = &DeleteIpv4GatewayRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Ecs", "2014-05-26", "DeleteDiskReplicaPair", "ecs", "openAPI")
+	request.InitWithApiInfo("Vpc", "2016-04-28", "DeleteIpv4Gateway", "vpc", "openAPI")
 	request.Method = requests.POST
 	return
 }
 
-// CreateDeleteDiskReplicaPairResponse creates a response to parse from DeleteDiskReplicaPair response
-func CreateDeleteDiskReplicaPairResponse() (response *DeleteDiskReplicaPairResponse) {
-	response = &DeleteDiskReplicaPairResponse{
+// CreateDeleteIpv4GatewayResponse creates a response to parse from DeleteIpv4Gateway response
+func CreateDeleteIpv4GatewayResponse() (response *DeleteIpv4GatewayResponse) {
+	response = &DeleteIpv4GatewayResponse{
 		BaseResponse: &responses.BaseResponse{},
 	}
 	return
