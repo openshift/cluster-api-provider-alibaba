@@ -27,7 +27,7 @@ if [ -n "$TRACE" ]; then
 fi
 
 # TODO: update to k8s 1.17
-k8s_version=1.16.4
+k8s_version=1.23.1
 goarch=amd64
 goos="unknown"
 
