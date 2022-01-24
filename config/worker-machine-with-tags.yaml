@@ -19,7 +19,8 @@ spec:
       regionId: FILLIN
       zoneId: FILLIN
       securityGroups:
-        - tags:
+        - type: Tags
+          tags:
           - key: Name
             value: ocp-test-sg
           - key: "kubernetes.io/cluster/abc-def"
@@ -28,6 +29,7 @@ spec:
             value: ISVAlibaba
       vpcId: FILLIN
       vSwitch:
+        type: Tags
         tags:
         - key: Name
           value: ocp-test-vswitch

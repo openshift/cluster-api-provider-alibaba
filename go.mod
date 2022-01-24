@@ -8,7 +8,7 @@ require (
 	github.com/go-logr/logr v1.2.2
 	github.com/golang/mock v1.6.0
 	github.com/onsi/gomega v1.17.0
-	github.com/openshift/api v0.0.0-20211222145011-3bf13cf5081a
+	github.com/openshift/api v0.0.0-20220124143425-d74727069f6f
 	github.com/openshift/machine-api-operator v0.2.1-0.20220119165902-b88b83bb15f9
 	github.com/stretchr/testify v1.7.0
 	k8s.io/api v0.23.0
