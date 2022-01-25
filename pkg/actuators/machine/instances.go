@@ -25,6 +25,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aliyun/alibaba-cloud-sdk-go/services/resourcemanager"
+
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/vpc"
 
 	"k8s.io/klog"
@@ -43,17 +45,6 @@ import (
 const (
 	// EcsImageStatusAvailable Image status
 	EcsImageStatusAvailable = "Available"
-
-	// MaxInstanceOfSecurityGroupTypeNormal A basic security group can contain a maximum of 2,000 instances.
-	MaxInstanceOfSecurityGroupTypeNormal = 2000
-
-	// MaxInstanceOfSecurityGroupTypeEnterprise An advanced security group can contain a maximum of 65,536 instances.
-	MaxInstanceOfSecurityGroupTypeEnterprise = 65536
-
-	// SecurityGroupTypeNormal SecurityGroup type normal
-	SecurityGroupTypeNormal = "normal"
-	// SecurityGroupTypeEnterprise SecurityGroup type enterprise
-	SecurityGroupTypeEnterprise = "enterprise"
 
 	// InstanceDefaultTimeout default timeout
 	InstanceDefaultTimeout = 900
@@ -115,7 +106,7 @@ func runInstances(machine *machinev1beta1.Machine, machineProviderConfig *machin
 	runInstancesRequest.RegionId = machineProviderConfig.RegionID
 
 	// ResourceGroupID
-	if groupId, err := getResourceGroupId(machineProviderConfig); err != nil {
+	if groupId, err := getResourceGroupId(machineKey, machineProviderConfig, client); err != nil {
 		klog.Errorf("Unable to determine resource group ID for machine %q, err %q", machine.Name, err)
 		return nil, mapierrors.InvalidMachineConfiguration("Unable to determine resource group ID for machine: %q", machine.Name)
 	} else {
@@ -399,7 +390,7 @@ func getSecurityGroupIDByTags(machine runtimeclient.ObjectKey, machineProviderCo
 	}
 	request := ecs.CreateDescribeSecurityGroupsRequest()
 	request.VpcId = machineProviderConfig.VpcID
-	if groupId, err := getResourceGroupId(machineProviderConfig); err != nil {
+	if groupId, err := getResourceGroupId(machine, machineProviderConfig, client); err != nil {
 		klog.Errorf("Unable to determine resource group ID for machine %q, err %q", machine.Name, err)
 		return nil, mapierrors.InvalidMachineConfiguration("Unable to determine resource group ID for machine: %q", machine.Name)
 	} else {
@@ -428,17 +419,6 @@ func getSecurityGroupIDByTags(machine runtimeclient.ObjectKey, machineProviderCo
 		securityGroupIDs = append(securityGroupIDs, sg.SecurityGroupId)
 	}
 	return securityGroupIDs, nil
-}
-
-func getMaxInstancesBySecurityGroupType(securityGroupType string) int {
-	switch securityGroupType {
-	case SecurityGroupTypeNormal:
-		return MaxInstanceOfSecurityGroupTypeNormal
-	case SecurityGroupTypeEnterprise:
-		return MaxInstanceOfSecurityGroupTypeEnterprise
-	default:
-		return MaxInstanceOfSecurityGroupTypeNormal
-	}
 }
 
 func buildDescribeSecurityGroupsTag(tags []machinev1.Tag) *[]ecs.DescribeSecurityGroupsTag {
@@ -824,7 +804,7 @@ func correctExistingTags(machine *machinev1beta1.Machine, regionID string, insta
 // resource group id if available, or determine the group id by using the search tags.
 // An error will be returned if no group id can be found, or if multiple groups are
 // found from the search tags.
-func getResourceGroupId(machineProviderConfig *machinev1.AlibabaCloudMachineProviderConfig) (string, error) {
+func getResourceGroupId(machine runtimeclient.ObjectKey, machineProviderConfig *machinev1.AlibabaCloudMachineProviderConfig, client alibabacloudClient.Client) (string, error) {
 	switch machineProviderConfig.ResourceGroup.Type {
 	case machinev1.AlibabaResourceReferenceTypeID:
 		if machineProviderConfig.ResourceGroup.ID != nil && *machineProviderConfig.ResourceGroup.ID != "" {
@@ -832,8 +812,36 @@ func getResourceGroupId(machineProviderConfig *machinev1.AlibabaCloudMachineProv
 		} else {
 			return "", mapierrors.InvalidMachineConfiguration("No resource group ID provided")
 		}
-		// TODO add name search lookup case here
+	case machinev1.AlibabaResourceReferenceTypeName:
+		return getResourceGroupIdFromName(machine, machineProviderConfig, client)
 	default:
 		return "", mapierrors.InvalidMachineConfiguration("unknown resource group reference type: %s", machineProviderConfig.ResourceGroup.Type)
 	}
+}
+
+func getResourceGroupIdFromName(machine runtimeclient.ObjectKey, machineProviderConfig *machinev1.AlibabaCloudMachineProviderConfig, client alibabacloudClient.Client) (string, error) {
+	if machineProviderConfig.ResourceGroup.Name == nil || *machineProviderConfig.ResourceGroup.Name == "" {
+		return "", mapierrors.InvalidMachineConfiguration("No name provided for resource Group ID search for machine: %q", machine.Name)
+	}
+	request := resourcemanager.CreateListResourceGroupsRequest()
+	request.Name = *machineProviderConfig.ResourceGroup.Name
+	request.RegionId = machineProviderConfig.RegionID
+	request.Scheme = "https"
+
+	response, err := client.ListResourceGroups(request)
+	if err != nil {
+		metrics.RegisterFailedInstanceCreate(&metrics.MachineLabels{
+			Name:      machine.Name,
+			Namespace: machine.Namespace,
+			Reason:    err.Error(),
+		})
+		klog.Errorf("error list resourcegroups: %v", err)
+		return "", fmt.Errorf("error list resourcegroups: %v", err)
+	}
+	if len(response.ResourceGroups.ResourceGroup) < 1 {
+		klog.Errorf("no resourcegroups for given name not found")
+		return "", fmt.Errorf("no resourcegroups for given name not found")
+	}
+
+	return response.ResourceGroups.ResourceGroup[0].Id, nil
 }
