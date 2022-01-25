@@ -839,8 +839,8 @@ func getResourceGroupIdFromName(machine runtimeclient.ObjectKey, machineProvider
 		return "", fmt.Errorf("error list resourcegroups: %v", err)
 	}
 	if len(response.ResourceGroups.ResourceGroup) < 1 {
-		klog.Errorf("no resourcegroups for given name not found")
-		return "", fmt.Errorf("no resourcegroups for given name not found")
+		klog.Errorf("no resourcegroups for given name  found")
+		return "", fmt.Errorf("no resourcegroups for given name  found")
 	}
 
 	return response.ResourceGroups.ResourceGroup[0].Id, nil
