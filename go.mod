@@ -3,7 +3,7 @@ module github.com/openshift/cluster-api-provider-alibaba
 go 1.17
 
 require (
-	github.com/aliyun/alibaba-cloud-sdk-go v1.61.1449
+	github.com/aliyun/alibaba-cloud-sdk-go v1.61.1458
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/go-logr/logr v1.2.2
 	github.com/golang/mock v1.6.0
