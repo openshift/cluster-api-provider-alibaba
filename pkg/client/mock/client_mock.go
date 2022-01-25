@@ -8,6 +8,7 @@ import (
 	reflect "reflect"
 
 	ecs "github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
+	resourcemanager "github.com/aliyun/alibaba-cloud-sdk-go/services/resourcemanager"
 	slb "github.com/aliyun/alibaba-cloud-sdk-go/services/slb"
 	vpc "github.com/aliyun/alibaba-cloud-sdk-go/services/vpc"
 	gomock "github.com/golang/mock/gomock"
@@ -919,6 +920,21 @@ func (m *MockClient) LeaveSecurityGroup(arg0 *ecs.LeaveSecurityGroupRequest) (*e
 func (mr *MockClientMockRecorder) LeaveSecurityGroup(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LeaveSecurityGroup", reflect.TypeOf((*MockClient)(nil).LeaveSecurityGroup), arg0)
+}
+
+// ListResourceGroups mocks base method.
+func (m *MockClient) ListResourceGroups(arg0 *resourcemanager.ListResourceGroupsRequest) (*resourcemanager.ListResourceGroupsResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListResourceGroups", arg0)
+	ret0, _ := ret[0].(*resourcemanager.ListResourceGroupsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListResourceGroups indicates an expected call of ListResourceGroups.
+func (mr *MockClientMockRecorder) ListResourceGroups(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListResourceGroups", reflect.TypeOf((*MockClient)(nil).ListResourceGroups), arg0)
 }
 
 // ListTagResources mocks base method.
