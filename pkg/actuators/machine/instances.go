@@ -390,12 +390,6 @@ func getSecurityGroupIDByTags(machine runtimeclient.ObjectKey, machineProviderCo
 	}
 	request := ecs.CreateDescribeSecurityGroupsRequest()
 	request.VpcId = machineProviderConfig.VpcID
-	if groupId, err := getResourceGroupId(machine, machineProviderConfig, client); err != nil {
-		klog.Errorf("Unable to determine resource group ID for machine %q, err %q", machine.Name, err)
-		return nil, mapierrors.InvalidMachineConfiguration("Unable to determine resource group ID for machine: %q", machine.Name)
-	} else {
-		request.ResourceGroupId = groupId
-	}
 	request.RegionId = machineProviderConfig.RegionID
 	request.Tag = buildDescribeSecurityGroupsTag(*tags)
 	request.Scheme = "https"
