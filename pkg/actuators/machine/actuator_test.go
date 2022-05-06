@@ -18,15 +18,17 @@ package machine
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
-	"os"
-	"path/filepath"
+	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
 	"testing"
 
-	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
+	alibabacloudclient "github.com/openshift/cluster-api-provider-alibaba/pkg/client"
+
+	corev1 "k8s.io/api/core/v1"
+
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/golang/mock/gomock"
 	"github.com/openshift/cluster-api-provider-alibaba/pkg/client/mock"
@@ -38,198 +40,219 @@ import (
 	"k8s.io/client-go/tools/record"
 
 	configv1 "github.com/openshift/api/config/v1"
-	machinev1 "github.com/openshift/api/machine/v1beta1"
+	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	"k8s.io/client-go/kubernetes/scheme"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func init() {
 	// Add types to scheme
-	machinev1.AddToScheme(scheme.Scheme)
+	machinev1beta1.AddToScheme(scheme.Scheme)
 	configv1.AddToScheme(scheme.Scheme)
-}
-
-var (
-	k8sClient     client.Client
-	eventRecorder record.EventRecorder
-)
-
-// Init
-func TestMain(m *testing.M) {
-	testEnv := &envtest.Environment{
-		CRDDirectoryPaths: []string{
-			filepath.Join("..", "..", "..", "vendor", "github.com", "openshift", "api", "config", "v1"),
-			filepath.Join("..", "..", "..", "vendor", "github.com", "openshift", "api", "machine", "v1beta1"),
-		},
-	}
-
-	configv1.AddToScheme(scheme.Scheme)
-
-	cfg, err := testEnv.Start()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	defer func() {
-		if err := testEnv.Stop(); err != nil {
-			log.Fatal(err)
-		}
-	}()
-
-	mgr, err := manager.New(cfg, manager.Options{
-		Scheme:             scheme.Scheme,
-		MetricsBindAddress: "0",
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	mgrCtx, cancel := context.WithCancel(context.Background())
-	go func() {
-		if err := mgr.Start(mgrCtx); err != nil {
-			log.Fatal(err)
-		}
-	}()
-	defer cancel()
-
-	k8sClient = mgr.GetClient()
-	eventRecorder = mgr.GetEventRecorderFor("alibabacloud-controller")
-
-	code := m.Run()
-	os.Exit(code)
-}
-
-func Test_Client(t *testing.T) {
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	mockAlibabaCloudClient := mock.NewMockClient(mockCtrl)
-
-	mockAlibabaCloudClient.EXPECT().RunInstances(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().RunInstances(stubRunInstancesRequest()).Return(stubRunInstancesResponse(), nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().CreateInstance(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DescribeInstances(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DeleteInstances(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().StartInstance(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().RebootInstance(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().StopInstance(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().StartInstances(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().RebootInstances(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().StopInstances(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DeleteInstance(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().AttachInstanceRAMRole(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DetachInstanceRAMRole(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DescribeInstanceStatus(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().ReActivateInstances(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DescribeUserData(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DescribeInstanceTypes(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().ModifyInstanceAttribute(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().ModifyInstanceMetadataOptions(gomock.Any()).Return(nil, nil).AnyTimes()
-
-	mockAlibabaCloudClient.EXPECT().TagResources(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().ListTagResources(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().UntagResources(gomock.Any()).Return(nil, nil).AnyTimes()
-
-	mockAlibabaCloudClient.EXPECT().AllocatePublicIPAddress(gomock.Any()).Return(nil, nil).AnyTimes()
-
-	mockAlibabaCloudClient.EXPECT().CreateDisk(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().AttachDisk(gomock.Any()).Return(nil, nil).AnyTimes()
-
-	mockAlibabaCloudClient.EXPECT().DescribeDisks(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().ModifyDiskChargeType(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().ModifyDiskAttribute(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().ModifyDiskSpec(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().ReplaceSystemDisk(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().ReInitDisk(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().ResetDisk(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().ResizeDisk(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DetachDisk(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DeleteDisk(gomock.Any()).Return(nil, nil).AnyTimes()
-
-	mockAlibabaCloudClient.EXPECT().DescribeRegions(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DescribeZones(gomock.Any()).Return(nil, nil).AnyTimes()
-
-	mockAlibabaCloudClient.EXPECT().DescribeImages(gomock.Any()).Return(nil, nil).AnyTimes()
-
-	mockAlibabaCloudClient.EXPECT().CreateSecurityGroup(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().AuthorizeSecurityGroup(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().AuthorizeSecurityGroupEgress(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().RevokeSecurityGroup(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().RevokeSecurityGroupEgress(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().JoinSecurityGroup(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().LeaveSecurityGroup(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DescribeSecurityGroupAttribute(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DescribeSecurityGroups(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DescribeSecurityGroupReferences(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().ModifySecurityGroupAttribute(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().ModifySecurityGroupEgressRule(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().ModifySecurityGroupPolicy(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().ModifySecurityGroupRule(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DeleteSecurityGroup(gomock.Any()).Return(nil, nil).AnyTimes()
-
-	mockAlibabaCloudClient.EXPECT().CreateVpc(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DeleteVpc(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DescribeVpcs(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().CreateVSwitch(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DeleteVSwitch(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DescribeVSwitches(gomock.Any()).Return(nil, nil).AnyTimes()
-
-	mockAlibabaCloudClient.EXPECT().CreateNatGateway(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DescribeNatGateways(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DeleteNatGateway(gomock.Any()).Return(nil, nil).AnyTimes()
-
-	mockAlibabaCloudClient.EXPECT().AllocateEipAddress(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().AssociateEipAddress(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().ModifyEipAddressAttribute(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DescribeEipAddresses(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().UnassociateEipAddress(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().ReleaseEipAddress(gomock.Any()).Return(nil, nil).AnyTimes()
-
-	mockAlibabaCloudClient.EXPECT().CreateLoadBalancer(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DeleteLoadBalancer(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DescribeLoadBalancers(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().CreateLoadBalancerTCPListener(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().SetLoadBalancerTCPListenerAttribute(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DescribeLoadBalancerTCPListenerAttribute(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().CreateLoadBalancerUDPListener(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().SetLoadBalancerUDPListenerAttribute(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DescribeLoadBalancerUDPListenerAttribute(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().CreateLoadBalancerHTTPListener(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().SetLoadBalancerHTTPListenerAttribute(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DescribeLoadBalancerHTTPListenerAttribute(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().CreateLoadBalancerHTTPSListener(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().SetLoadBalancerHTTPSListenerAttribute(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DescribeLoadBalancerHTTPSListenerAttribute(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().StartLoadBalancerListener(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().StopLoadBalancerListener(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DeleteLoadBalancerListener(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DescribeLoadBalancerListeners(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().AddBackendServers(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().RemoveBackendServers(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().SetBackendServers(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DescribeHealthStatus(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().CreateVServerGroup(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().SetVServerGroupAttribute(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().AddVServerGroupBackendServers(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().RemoveVServerGroupBackendServers(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().ModifyVServerGroupBackendServers(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DeleteVServerGroup(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DescribeVServerGroups(gomock.Any()).Return(nil, nil).AnyTimes()
-	mockAlibabaCloudClient.EXPECT().DescribeVServerGroupAttribute(gomock.Any()).Return(nil, nil).AnyTimes()
 }
 
 func Test_Machine(t *testing.T) {
-	ctx := context.TODO()
 	gs := NewWithT(t)
 
-	machine, err := stubWorkerMachine()
-	gs.Expect(err).ToNot(HaveOccurred())
-	gs.Expect(stubMachine).ToNot(BeNil())
-
-	// Create the machine
-	gs.Expect(k8sClient.Create(ctx, machine)).To(Succeed())
+	alibabaCloudCredentialsSecret := stubAlibabaCloudCredentialsSecret()
+	gs.Expect(k8sClient.Create(context.TODO(), alibabaCloudCredentialsSecret)).To(Succeed())
 	defer func() {
-		gs.Expect(k8sClient.Delete(ctx, machine)).To(Succeed())
+		gs.Expect(k8sClient.Delete(context.TODO(), alibabaCloudCredentialsSecret)).To(Succeed())
 	}()
+
+	userDataSecret := stubUserDataSecret()
+	gs.Expect(k8sClient.Create(context.TODO(), userDataSecret)).To(Succeed())
+	defer func() {
+		gs.Expect(k8sClient.Delete(context.TODO(), userDataSecret)).To(Succeed())
+	}()
+
+	testCases := []struct {
+		name                          string
+		error                         string
+		operation                     func(actuator *Actuator, machine *machinev1beta1.Machine)
+		userDataSecret                *corev1.Secret
+		alibabaCloudCredentialsSecret *corev1.Secret
+		event                         string
+		invalidMachineScope           bool
+		alibabacloudClient            func(ctrl *gomock.Controller) alibabacloudclient.Client
+	}{
+		{
+			name: "Create machine event failed on invalid machine scope",
+			operation: func(actuator *Actuator, machine *machinev1beta1.Machine) {
+				actuator.Create(context.TODO(), machine)
+			},
+			userDataSecret:                stubUserDataSecret(),
+			alibabaCloudCredentialsSecret: stubAlibabaCloudCredentialsSecret(),
+			event:                         "InvalidConfiguration: failed to create machine \"alibabacloud-actuator-testing-master-machine\" scope: failed to create alibabacloud client: AlibabaCloud client error",
+			invalidMachineScope:           true,
+			alibabacloudClient: func(ctrl *gomock.Controller) alibabacloudclient.Client {
+				mockCtrl := gomock.NewController(t)
+				mockAlibabaCloudClient := mock.NewMockClient(mockCtrl)
+				return mockAlibabaCloudClient
+			},
+		},
+		{
+			name: "Create machine event succeed",
+			operation: func(actuator *Actuator, machine *machinev1beta1.Machine) {
+				actuator.Create(context.TODO(), machine)
+			},
+			userDataSecret:                stubUserDataSecret(),
+			alibabaCloudCredentialsSecret: stubAlibabaCloudCredentialsSecret(),
+			event:                         "Created Machine alibabacloud-actuator-testing-master-machine",
+			invalidMachineScope:           false,
+			alibabacloudClient: func(ctrl *gomock.Controller) alibabacloudclient.Client {
+				mockCtrl := gomock.NewController(t)
+				mockAlibabaCloudClient := mock.NewMockClient(mockCtrl)
+				mockAlibabaCloudClient.EXPECT().DescribeImages(gomock.Any()).Return(stubDescribeImagesResponse(), nil).AnyTimes()
+				mockAlibabaCloudClient.EXPECT().ListResourceGroups(gomock.Any()).Return(stubListResourceGroupsResponse(), nil).AnyTimes()
+				mockAlibabaCloudClient.EXPECT().DescribeSecurityGroups(gomock.Any()).Return(stubDescribeSecurityGroupsResponse(), nil).AnyTimes()
+				mockAlibabaCloudClient.EXPECT().DescribeVSwitches(gomock.Any()).Return(stubDescribeVSwitchesResponse(), nil).AnyTimes()
+				mockAlibabaCloudClient.EXPECT().TagResources(gomock.Any()).Return(&ecs.TagResourcesResponse{}, nil).AnyTimes()
+				mockAlibabaCloudClient.EXPECT().RunInstances(gomock.Any()).Return(stubRunInstancesResponse(), nil).AnyTimes()
+				mockAlibabaCloudClient.EXPECT().DescribeInstances(gomock.Any()).Return(stubDescribeInstancesResponse(), nil).AnyTimes()
+				return mockAlibabaCloudClient
+			},
+		},
+		{
+			name: "Update machine event failed on invalid machine scope",
+			operation: func(actuator *Actuator, machine *machinev1beta1.Machine) {
+				actuator.Update(context.TODO(), machine)
+			},
+			userDataSecret:                stubUserDataSecret(),
+			alibabaCloudCredentialsSecret: stubAlibabaCloudCredentialsSecret(),
+			event:                         "InvalidConfiguration: failed to create machine \"alibabacloud-actuator-testing-master-machine\" scope: failed to create alibabacloud client: AlibabaCloud client error",
+			invalidMachineScope:           true,
+			alibabacloudClient: func(ctrl *gomock.Controller) alibabacloudclient.Client {
+				mockCtrl := gomock.NewController(t)
+				mockAlibabaCloudClient := mock.NewMockClient(mockCtrl)
+				mockAlibabaCloudClient.EXPECT().DescribeInstances(gomock.Any()).Return(stubDescribeInstancesResponse(), nil).AnyTimes()
+				return mockAlibabaCloudClient
+			},
+		},
+		{
+			name: "Update machine event succeed",
+			operation: func(actuator *Actuator, machine *machinev1beta1.Machine) {
+				actuator.Update(context.TODO(), machine)
+			},
+			event: "Updated Machine alibabacloud-actuator-testing-master-machine",
+			alibabacloudClient: func(ctrl *gomock.Controller) alibabacloudclient.Client {
+				mockCtrl := gomock.NewController(t)
+				mockAlibabaCloudClient := mock.NewMockClient(mockCtrl)
+				mockAlibabaCloudClient.EXPECT().DescribeInstances(gomock.Any()).Return(stubDescribeInstancesResponse(), nil).AnyTimes()
+				return mockAlibabaCloudClient
+			},
+		},
+		{
+			name: "Delete machine event failed on invalid machine scope",
+			operation: func(actuator *Actuator, machine *machinev1beta1.Machine) {
+				actuator.Delete(context.TODO(), machine)
+			},
+			userDataSecret:                stubUserDataSecret(),
+			alibabaCloudCredentialsSecret: stubAlibabaCloudCredentialsSecret(),
+			event:                         "DeleteError: failed to create machine \"alibabacloud-actuator-testing-master-machine\" scope: failed to create alibabacloud client: AlibabaCloud client error",
+			invalidMachineScope:           true,
+			alibabacloudClient: func(ctrl *gomock.Controller) alibabacloudclient.Client {
+				mockCtrl := gomock.NewController(t)
+				mockAlibabaCloudClient := mock.NewMockClient(mockCtrl)
+				mockAlibabaCloudClient.EXPECT().DescribeInstances(gomock.Any()).Return(stubDescribeInstancesResponse(), nil).AnyTimes()
+				return mockAlibabaCloudClient
+			},
+		},
+		{
+			name: "Delete machine event succeed",
+			operation: func(actuator *Actuator, machine *machinev1beta1.Machine) {
+				actuator.Delete(context.TODO(), machine)
+			},
+			event: "Deleted machine \"alibabacloud-actuator-testing-master-machine\"",
+			alibabacloudClient: func(ctrl *gomock.Controller) alibabacloudclient.Client {
+				mockCtrl := gomock.NewController(t)
+				mockAlibabaCloudClient := mock.NewMockClient(mockCtrl)
+				mockAlibabaCloudClient.EXPECT().DescribeInstances(gomock.Any()).Return(stubDescribeInstancesWithParamsResponse(stubImageID, stubInstanceID, stubStoppedInstanceStatus, "192.168.1.1"), nil).AnyTimes()
+				mockAlibabaCloudClient.EXPECT().StopInstances(gomock.Any()).Return(&ecs.StopInstancesResponse{}, nil).AnyTimes()
+				mockAlibabaCloudClient.EXPECT().DeleteInstances(gomock.Any()).Return(&ecs.DeleteInstancesResponse{}, nil).AnyTimes()
+
+				return mockAlibabaCloudClient
+			},
+		},
+		{
+			name: "Exists machine event failed on invalid machine scope",
+			operation: func(actuator *Actuator, machine *machinev1beta1.Machine) {
+				actuator.Exists(context.TODO(), machine)
+			},
+			userDataSecret:                stubUserDataSecret(),
+			alibabaCloudCredentialsSecret: stubAlibabaCloudCredentialsSecret(),
+			event:                         "InvalidConfiguration: failed to create machine \"alibabacloud-actuator-testing-master-machine\" scope: failed to create alibabacloud client: AlibabaCloud client error",
+			invalidMachineScope:           true,
+			alibabacloudClient: func(ctrl *gomock.Controller) alibabacloudclient.Client {
+				mockCtrl := gomock.NewController(t)
+				mockAlibabaCloudClient := mock.NewMockClient(mockCtrl)
+				return mockAlibabaCloudClient
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.TODO()
+			gs := NewWithT(t)
+
+			machine, err := stubMasterMachine()
+			gs.Expect(err).ToNot(HaveOccurred())
+			gs.Expect(stubMachine).ToNot(BeNil())
+
+			// Create the machine
+			gs.Expect(k8sClient.Create(ctx, machine)).To(Succeed())
+			defer func() {
+				gs.Expect(k8sClient.Delete(ctx, machine)).To(Succeed())
+			}()
+
+			// Ensure the machine has synced to the cache
+			getMachine := func() error {
+				machineKey := types.NamespacedName{Namespace: machine.Namespace, Name: machine.Name}
+				return k8sClient.Get(ctx, machineKey, machine)
+			}
+			gs.Eventually(getMachine, timeout).Should(Succeed())
+
+			mockCtrl := gomock.NewController(t)
+			alibabacloudClientBuilder := func(client runtimeclient.Client, secretName, namespace, region string, configManagedClient runtimeclient.Client) (alibabacloudclient.Client, error) {
+				return tc.alibabacloudClient(mockCtrl), nil
+			}
+
+			if tc.invalidMachineScope {
+				alibabacloudClientBuilder = func(client runtimeclient.Client, secretName, namespace, region string, configManagedClient runtimeclient.Client) (alibabacloudclient.Client, error) {
+					return nil, errors.New("AlibabaCloud client error")
+				}
+			}
+
+			params := ActuatorParams{
+				Client:                    k8sClient,
+				EventRecorder:             eventRecorder,
+				AlibabaCloudClientBuilder: alibabacloudClientBuilder,
+				ReconcilerBuilder:         NewReconciler,
+			}
+
+			actuator := NewActuator(params)
+			tc.operation(actuator, machine)
+
+			eventList := &corev1.EventList{}
+			waitForEvent := func() error {
+				gs.Expect(k8sClient.List(ctx, eventList, client.InNamespace(machine.Namespace))).To(Succeed())
+				if len(eventList.Items) != 1 {
+					errorMsg := fmt.Sprintf("Expected len 1, got %d", len(eventList.Items))
+					return errors.New(errorMsg)
+				}
+				return nil
+			}
+
+			gs.Eventually(waitForEvent, timeout).Should(Succeed())
+
+			gs.Expect(eventList.Items[0].Message).To(Equal(tc.event))
+
+			for i := range eventList.Items {
+				gs.Expect(k8sClient.Delete(ctx, &eventList.Items[i])).To(Succeed())
+			}
+		})
+	}
 }
 
 func Test_HandleMachineErrors(t *testing.T) {
@@ -258,7 +281,6 @@ func Test_HandleMachineErrors(t *testing.T) {
 		eventsChannel := make(chan string, 1)
 
 		params := ActuatorParams{
-			// use fake recorder and store an event into one item long buffer for subsequent check
 			EventRecorder: &record.FakeRecorder{
 				Events: eventsChannel,
 			},
@@ -276,4 +298,9 @@ func Test_HandleMachineErrors(t *testing.T) {
 			}
 		}
 	}
+}
+
+func getInstanceIds() string {
+	instanceIds, _ := json.Marshal([]string{stubInstanceID})
+	return string(instanceIds)
 }
