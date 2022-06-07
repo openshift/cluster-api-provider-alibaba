@@ -20,29 +20,22 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"testing"
-	"time"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	corev1 "k8s.io/api/core/v1"
-
-	alibabacloudproviderv1 "github.com/openshift/cluster-api-provider-alibaba/pkg/apis/alibabacloudprovider/v1"
-
-	configv1 "github.com/openshift/api/config/v1"
-
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
-
 	"github.com/golang/mock/gomock"
+	configv1 "github.com/openshift/api/config/v1"
 	machinev1 "github.com/openshift/api/machine/v1"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-
+	alibabacloudproviderv1 "github.com/openshift/cluster-api-provider-alibaba/pkg/apis/alibabacloudprovider/v1"
 	alibabacloudclient "github.com/openshift/cluster-api-provider-alibaba/pkg/client"
 	"github.com/openshift/cluster-api-provider-alibaba/pkg/client/mock"
 	machinecontroller "github.com/openshift/machine-api-operator/pkg/controller/machine"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/kubectl/pkg/scheme"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"testing"
+	"time"
 )
 
 func init() {
@@ -51,7 +44,7 @@ func init() {
 	configv1.AddToScheme(scheme.Scheme)
 }
 
-func Test_Create(t *testing.T) {
+func TestCreate(t *testing.T) {
 	// mock  API calls
 	mockCtrl := gomock.NewController(t)
 	mockAlibabaCloudClient := mock.NewMockClient(mockCtrl)
@@ -181,7 +174,7 @@ func Test_Create(t *testing.T) {
 	}
 }
 
-func Test_Update(t *testing.T) {
+func TestUpdate(t *testing.T) {
 	testCases := []struct {
 		name               string
 		machine            func() *machinev1beta1.Machine
@@ -284,7 +277,7 @@ func Test_Update(t *testing.T) {
 	}
 }
 
-func Test_Delete(t *testing.T) {
+func TestDelete(t *testing.T) {
 	testCases := []struct {
 		name               string
 		machine            func() *machinev1beta1.Machine
@@ -359,7 +352,7 @@ func Test_Delete(t *testing.T) {
 	}
 }
 
-func Test_Exists(t *testing.T) {
+func TestExists(t *testing.T) {
 	testCases := []struct {
 		name               string
 		machine            func() *machinev1beta1.Machine
@@ -474,7 +467,7 @@ func Test_Exists(t *testing.T) {
 	}
 }
 
-func Test_getMachineInstances(t *testing.T) {
+func TestGetMachineInstances(t *testing.T) {
 	machine, err := stubMasterMachine()
 	if err != nil {
 		t.Fatalf("unable to build stub machine: %v", err)

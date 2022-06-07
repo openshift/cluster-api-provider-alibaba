@@ -18,24 +18,16 @@ package machine
 
 import (
 	"fmt"
-	"reflect"
-	"testing"
-	"time"
-
+	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/resourcemanager"
-
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/vpc"
-
-	"github.com/stretchr/testify/assert"
-
+	"github.com/golang/mock/gomock"
 	machinev1 "github.com/openshift/api/machine/v1"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
-
 	"github.com/openshift/cluster-api-provider-alibaba/pkg/client/mock"
-
-	"github.com/golang/mock/gomock"
-
-	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
+	"github.com/stretchr/testify/assert"
+	"reflect"
+	"testing"
 )
 
 func createDescribeInstancesRequest(ids string) *ecs.DescribeInstancesRequest {
@@ -45,7 +37,7 @@ func createDescribeInstancesRequest(ids string) *ecs.DescribeInstancesRequest {
 	return request
 }
 
-func Test_runInstances(t *testing.T) {
+func TestRunInstances(t *testing.T) {
 	machine, err := stubMasterMachine()
 	if err != nil {
 		t.Fatalf("Unable to build test machine manifest: %v", err)
@@ -864,7 +856,7 @@ func Test_runInstances(t *testing.T) {
 	}
 }
 
-func Test_buildDescribeSecurityGroupsTag(t *testing.T) {
+func TestBuildDescribeSecurityGroupsTag(t *testing.T) {
 	cases := []struct {
 		tagList  []machinev1.Tag
 		expected []ecs.DescribeSecurityGroupsTag
@@ -892,7 +884,6 @@ func Test_buildDescribeSecurityGroupsTag(t *testing.T) {
 			expected: []ecs.DescribeSecurityGroupsTag{
 				{Key: "clusterID", Value: "test-ClusterID"},
 				{Key: "clusterSize", Value: "test-ClusterSize"},
-				{Key: "clusterSize", Value: "test-ClusterSizeDuplicatedValue"},
 			},
 		},
 	}
@@ -905,7 +896,7 @@ func Test_buildDescribeSecurityGroupsTag(t *testing.T) {
 	}
 }
 
-func Test_buildDescribeVSwitchesTag(t *testing.T) {
+func TestBuildDescribeVSwitchesTag(t *testing.T) {
 	cases := []struct {
 		tagList  []machinev1.Tag
 		expected []vpc.DescribeVSwitchesTag
@@ -933,7 +924,6 @@ func Test_buildDescribeVSwitchesTag(t *testing.T) {
 			expected: []vpc.DescribeVSwitchesTag{
 				{Key: "clusterID", Value: "test-ClusterID"},
 				{Key: "clusterSize", Value: "test-ClusterSize"},
-				{Key: "clusterSize", Value: "test-ClusterSizeDuplicatedValue"},
 			},
 		},
 	}
@@ -946,7 +936,7 @@ func Test_buildDescribeVSwitchesTag(t *testing.T) {
 	}
 }
 
-func Test_buildTagList(t *testing.T) {
+func TestBuildTagList(t *testing.T) {
 	cases := []struct {
 		name            string
 		machineSpecTags []machinev1beta1.TagSpecification
@@ -1015,7 +1005,7 @@ func Test_buildTagList(t *testing.T) {
 	}
 }
 
-func Test_removeDuplicatedTags(t *testing.T) {
+func TestRemoveDuplicatedTags(t *testing.T) {
 	cases := []struct {
 		tagList  []*machinev1.Tag
 		expected []*machinev1.Tag
@@ -1056,7 +1046,7 @@ func Test_removeDuplicatedTags(t *testing.T) {
 	}
 }
 
-func Test_covertToRunInstancesTag(t *testing.T) {
+func TestCovertToRunInstancesTag(t *testing.T) {
 	cases := []struct {
 		tagList  []*machinev1.Tag
 		expected []ecs.RunInstancesTag
@@ -1097,7 +1087,7 @@ func Test_covertToRunInstancesTag(t *testing.T) {
 	}
 }
 
-func Test_instanceHasSupportedState(t *testing.T) {
+func TestInstanceHasSupportedState(t *testing.T) {
 	cases := []struct {
 		instance       *ecs.Instance
 		instanceStates []string
@@ -1136,25 +1126,35 @@ func Test_instanceHasSupportedState(t *testing.T) {
 	}
 }
 
-func Test_sortInstances(t *testing.T) {
+func TestSortInstances(t *testing.T) {
 	instances := []*ecs.Instance{
 		{
-			StartTime: time.Now().String(),
+			InstanceId: "i-abc",
+			StartTime:  "2020-01-02T15:04:05Z",
 		},
 		{
-			StartTime: "",
+			InstanceId: "i-abd",
+			StartTime:  "2022-05-02T15:04:05Z",
 		},
 		{
-			StartTime: "",
+			InstanceId: "i-abe",
+			StartTime:  "2024-05-02T17:04:05Z",
 		},
 		{
-			StartTime: time.Now().String(),
+			InstanceId: "i-abf",
+			StartTime:  "",
 		},
 	}
 	sortInstances(instances)
+
+	assert.Equal(t, "i-abf", instances[0].InstanceId)
+	assert.Equal(t, "i-abe", instances[1].InstanceId)
+	assert.Equal(t, "i-abd", instances[2].InstanceId)
+	assert.Equal(t, "i-abc", instances[3].InstanceId)
+
 }
 
-func Test_correctExistingTags(t *testing.T) {
+func TestCorrectExistingTags(t *testing.T) {
 	machine, err := stubMachine(stubMasterMachineName, nil)
 	if err != nil {
 		t.Fatalf("Unable to build test machine manifest: %v", err)

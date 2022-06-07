@@ -51,7 +51,7 @@ func init() {
 	configv1.AddToScheme(scheme.Scheme)
 }
 
-func Test_Machine(t *testing.T) {
+func TestMachine(t *testing.T) {
 	gs := NewWithT(t)
 
 	alibabaCloudCredentialsSecret := stubAlibabaCloudCredentialsSecret()
@@ -255,7 +255,7 @@ func Test_Machine(t *testing.T) {
 	}
 }
 
-func Test_HandleMachineErrors(t *testing.T) {
+func TestHandleMachineErrors(t *testing.T) {
 	masterMachine, err := stubMasterMachine()
 	if err != nil {
 		t.Fatal(err)

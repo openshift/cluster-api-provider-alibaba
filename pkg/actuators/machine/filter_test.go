@@ -7,7 +7,7 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
 )
 
-func Test_clusterTagFilter(t *testing.T) {
+func TestClusterTagFilter(t *testing.T) {
 	var cases = []struct {
 		clusterId   string
 		machineName string

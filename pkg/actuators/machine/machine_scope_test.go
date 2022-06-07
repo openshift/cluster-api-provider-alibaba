@@ -21,27 +21,23 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"path/filepath"
-	"reflect"
-	"testing"
-
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
-
 	. "github.com/onsi/gomega"
-	alibabacloudclient "github.com/openshift/cluster-api-provider-alibaba/pkg/client"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/envtest"
-
 	machinev1 "github.com/openshift/api/machine/v1"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	alibabacloudproviderv1 "github.com/openshift/cluster-api-provider-alibaba/pkg/apis/alibabacloudprovider/v1"
+	alibabacloudclient "github.com/openshift/cluster-api-provider-alibaba/pkg/client"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"path/filepath"
+	"reflect"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/envtest"
+	"testing"
 )
 
 const testNamespace = "ms-test"
@@ -65,7 +61,7 @@ func machineWithSpec(spec *machinev1.AlibabaCloudMachineProviderConfig) *machine
 	}
 }
 
-func Test_getUserData(t *testing.T) {
+func TestGetUserData(t *testing.T) {
 	userDataSecretName := "test-ms-secret"
 
 	defaultProviderSpec := &machinev1.AlibabaCloudMachineProviderConfig{
@@ -162,7 +158,7 @@ func Test_getUserData(t *testing.T) {
 	}
 }
 
-func Test_patchMachine(t *testing.T) {
+func TestPatchMachine(t *testing.T) {
 	g := NewWithT(t)
 
 	testEnv := &envtest.Environment{
@@ -309,7 +305,7 @@ func Test_patchMachine(t *testing.T) {
 	}
 }
 
-func Test_getNetworkAddress(t *testing.T) {
+func TestGetNetworkAddress(t *testing.T) {
 	cases := []struct {
 		name     string
 		instance *ecs.Instance

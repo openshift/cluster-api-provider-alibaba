@@ -22,13 +22,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_ByteArray2String(t *testing.T) {
+func TestByteArray2String(t *testing.T) {
 	str := ByteArray2String([]byte("abc"))
 
 	assert.Equal(t, "abc", str)
 }
 
-func Test_String2IntPointer(t *testing.T) {
+func TestString2IntPointer(t *testing.T) {
 	i, err := String2IntPointer("0")
 	assert.Nil(t, err)
 

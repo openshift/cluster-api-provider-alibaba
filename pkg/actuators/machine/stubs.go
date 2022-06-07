@@ -74,10 +74,10 @@ func stubUserDataSecret() *corev1.Secret {
 }
 
 func stubAlibabaCloudCredentialsSecret() *corev1.Secret {
-	return GenerateAlibabaCloudCredentialsSecretFromEnv(alibabaCloudCredentialsSecretName, defaultNamespace)
+	return generateAlibabaCloudCredentialsSecretFromEnv(alibabaCloudCredentialsSecretName, defaultNamespace)
 }
 
-func GenerateAlibabaCloudCredentialsSecretFromEnv(secretName, namespace string) *corev1.Secret {
+func generateAlibabaCloudCredentialsSecretFromEnv(secretName, namespace string) *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
