@@ -422,9 +422,9 @@ func getSecurityGroupIDByTags(machine runtimeclient.ObjectKey, machineProviderCo
 }
 
 func buildDescribeSecurityGroupsTag(tags []machinev1.Tag) *[]ecs.DescribeSecurityGroupsTag {
-	describeSecurityGroupsTag := make([]ecs.DescribeSecurityGroupsTag, len(tags))
-
-	for index, tag := range tags {
+	rawTagList := removeDuplicatedMachineTags(tags)
+	describeSecurityGroupsTag := make([]ecs.DescribeSecurityGroupsTag, len(rawTagList))
+	for index, tag := range rawTagList {
 		describeSecurityGroupsTag[index] = ecs.DescribeSecurityGroupsTag{
 			Key:   tag.Key,
 			Value: tag.Value,
@@ -478,9 +478,10 @@ func getVSwitchIDFromTags(machine runtimeclient.ObjectKey, mpc *machinev1.Alibab
 }
 
 func buildDescribeVSwitchesTag(tags []machinev1.Tag) *[]vpc.DescribeVSwitchesTag {
-	describeVSwitchesTag := make([]vpc.DescribeVSwitchesTag, len(tags))
+	rawTagList := removeDuplicatedMachineTags(tags)
+	describeVSwitchesTag := make([]vpc.DescribeVSwitchesTag, len(rawTagList))
 
-	for index, tag := range tags {
+	for index, tag := range rawTagList {
 		describeVSwitchesTag[index] = vpc.DescribeVSwitchesTag{
 			Key:   tag.Key,
 			Value: tag.Value,
@@ -488,6 +489,18 @@ func buildDescribeVSwitchesTag(tags []machinev1.Tag) *[]vpc.DescribeVSwitchesTag
 	}
 
 	return &describeVSwitchesTag
+}
+
+func removeDuplicatedMachineTags(machineTags []machinev1.Tag) []*machinev1.Tag {
+	rawTagList := make([]*machinev1.Tag, 0)
+	for _, tag := range machineTags {
+		rawTagList = append(rawTagList, &machinev1.Tag{
+			Key:   tag.Key,
+			Value: tag.Value,
+		})
+	}
+
+	return removeDuplicatedTags(rawTagList)
 }
 
 // buildTagList compile a list of ecs tags from machine provider spec and infrastructure object platform spec

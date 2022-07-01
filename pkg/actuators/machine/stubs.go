@@ -5,6 +5,10 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/aliyun/alibaba-cloud-sdk-go/services/resourcemanager"
+
+	"github.com/aliyun/alibaba-cloud-sdk-go/services/vpc"
+
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
@@ -18,10 +22,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
+var (
 	defaultNamespace                     = "default"
-	stubZoneID                           = "cn-beijing"
-	stubRegionID                         = "cn-beijing-f"
+	stubZoneID                           = "cn-beijing-f"
+	stubRegionID                         = "cn-beijing"
 	alibabaCloudCredentialsSecretName    = "alibabacloud-credentials-secret"
 	alibabaCloudMasterUserDataSecretName = "master-user-data-secret"
 	alibabaCloudWorkerUserDataSecretName = "worker-user-data-secret"
@@ -32,22 +36,52 @@ const (
 	stubKeyName                 = "alibabacloud-actuator-key-name"
 	stubClusterID               = "alibabacloud-actuator-cluster"
 	stubImageID                 = "centos_7_9_x64_20G_alibase_20210318.vhd"
-	stubVpcID                   = "vpc-3ze4u29pd4lniym7i1xnp"
-	stubVSwitchID               = "vsw-7ze567qrl5das7q8s4rei"
-	stubInstanceID              = "i-2ze3hj0qh9d290rpax7w"
-	stubSecurityGroupID         = "sg-2zeebk9qd965vc2xqq4w"
+	stubVpcID                   = "vpc-vk6f1qfd3w77gnmh"
+	stubVSwitchID               = "vsw-sc0w64w2s3d9s8cu"
+	stubInstanceID              = "i-bg2ss7v5ck5skyp9"
+	stubSecurityGroupID         = "sg-h8ympu5av8hhtwks"
+	stubResourceGroupID         = "rg-6ljxzbpksxaa0buw"
+	stubResourceGroupName       = "test-rg"
 	stubSystemDiskCategory      = "cloud_essd"
 	stubSystemDiskSize          = 120
 	stubInternetMaxBandwidthOut = 100
 	stubPassword                = "Hello$1234"
 	stubInstanceType            = "ecs.c6.2xlarge"
+	stubInstanceStatus          = "Running"
+
+	stubRunningInstanceStauts  = ECSInstanceStatusRunning
+	stubPendingInstanceStatus  = ECSInstanceStatusPending
+	stubStartingInstanceStatus = ECSInstanceStatusStarting
+	stubStoppingInstanceStatus = ECSInstanceStatusStopping
+	stubStoppedInstanceStatus  = ECSInstanceStatusStopped
+	stubReleasedInstanceStatus = "Released"
 )
 
-func stubAlibabaCloudCredentialsSecret() *corev1.Secret {
+const userDataBlob = `#!/bin/bash
+echo "test"
+`
+
+func stubUserDataSecret() *corev1.Secret {
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      alibabaCloudCredentialsSecretName,
+			Name:      alibabaCloudMasterUserDataSecretName,
 			Namespace: defaultNamespace,
+		},
+		Data: map[string][]byte{
+			userDataSecretKey: []byte(userDataBlob),
+		},
+	}
+}
+
+func stubAlibabaCloudCredentialsSecret() *corev1.Secret {
+	return generateAlibabaCloudCredentialsSecretFromEnv(alibabaCloudCredentialsSecretName, defaultNamespace)
+}
+
+func generateAlibabaCloudCredentialsSecretFromEnv(secretName, namespace string) *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: namespace,
 		},
 		Data: map[string][]byte{
 			"accessKeyID":     []byte(os.Getenv("ALIBABACLOUD_ACCESS_KEY_ID")),
@@ -56,8 +90,36 @@ func stubAlibabaCloudCredentialsSecret() *corev1.Secret {
 	}
 }
 
+func stubProviderConfigSecurityGroups(groups []machinev1.AlibabaResourceReference) *machinev1.AlibabaCloudMachineProviderConfig {
+	pc := stubProviderConfig()
+	pc.SecurityGroups = groups
+	return pc
+}
+
+func stubProviderConfigResourceGroup(group machinev1.AlibabaResourceReference) *machinev1.AlibabaCloudMachineProviderConfig {
+	pc := stubProviderConfig()
+	pc.SecurityGroups = []machinev1.AlibabaResourceReference{
+		{
+			Type: machinev1.AlibabaResourceReferenceTypeTags,
+			Tags: &[]machinev1.Tag{
+				{
+					Key:   "Name",
+					Value: "test-sg",
+				},
+			},
+		},
+	}
+	pc.ResourceGroup = group
+	return pc
+}
+
+func stubProviderConfigVSwitches(group machinev1.AlibabaResourceReference) *machinev1.AlibabaCloudMachineProviderConfig {
+	pc := stubProviderConfig()
+	pc.VSwitch = group
+	return pc
+}
+
 func stubProviderConfig() *machinev1.AlibabaCloudMachineProviderConfig {
-	vSwitchID := stubVSwitchID
 	return &machinev1.AlibabaCloudMachineProviderConfig{
 		InstanceType: stubInstanceType,
 		ImageID:      stubImageID,
@@ -66,20 +128,38 @@ func stubProviderConfig() *machinev1.AlibabaCloudMachineProviderConfig {
 		SecurityGroups: []machinev1.AlibabaResourceReference{
 			{
 				Type: machinev1.AlibabaResourceReferenceTypeID,
-				ID:   &vSwitchID,
+				ID:   &stubSecurityGroupID,
 			},
+		},
+		ResourceGroup: machinev1.AlibabaResourceReference{
+			Type: machinev1.AlibabaResourceReferenceTypeID,
+			ID:   &stubResourceGroupID,
 		},
 		VpcID: stubVpcID,
 		VSwitch: machinev1.AlibabaResourceReference{
 			Type: machinev1.AlibabaResourceReferenceTypeID,
-			ID:   &vSwitchID,
+			ID:   &stubVSwitchID,
 		},
 		SystemDisk: machinev1.SystemDiskProperties{
 			Category: stubSystemDiskCategory,
-			Size:     stubSystemDiskSize,
+			Size:     int64(stubSystemDiskSize),
+		},
+		DataDisks: []machinev1.DataDiskProperties{
+			{
+				Size:             100,
+				Category:         "cloud_ssd",
+				DiskEncryption:   machinev1.AlibabaDiskEncryptionDisabled,
+				Name:             "my-disk",
+				SnapshotID:       "sp-xxx",
+				PerformanceLevel: "p2",
+				DiskPreservation: machinev1.DeleteWithInstance,
+			},
 		},
 		Bandwidth: machinev1.BandwidthProperties{
-			InternetMaxBandwidthOut: stubInternetMaxBandwidthOut,
+			InternetMaxBandwidthOut: int64(stubInternetMaxBandwidthOut),
+		},
+		UserDataSecret: &corev1.LocalObjectReference{
+			Name: alibabaCloudMasterUserDataSecretName,
 		},
 		CredentialsSecret: &corev1.LocalObjectReference{
 			Name: alibabaCloudCredentialsSecretName,
@@ -174,4 +254,108 @@ func stubRunInstancesResponse() *ecs.RunInstancesResponse {
 	}
 
 	return response
+}
+
+func stubDescribeInstancesResponse() *ecs.DescribeInstancesResponse {
+	return stubDescribeInstancesWithParamsResponse(stubImageID, stubInstanceID, stubRunningInstanceStauts, "192.168.1.0")
+}
+
+func stubDescribeInstancesWithParamsResponse(imageID, instanceID string, state string, privateIP string) *ecs.DescribeInstancesResponse {
+	return &ecs.DescribeInstancesResponse{
+		Instances: ecs.InstancesInDescribeInstances{
+			Instance: []ecs.Instance{
+				{
+					ImageId:    imageID,
+					InstanceId: instanceID,
+					Status:     state,
+					RegionId:   stubRegionID,
+					NetworkInterfaces: ecs.NetworkInterfacesInDescribeInstances{
+						NetworkInterface: []ecs.NetworkInterface{
+							{
+								PrivateIpSets: ecs.PrivateIpSetsInDescribeInstances{
+									PrivateIpSet: []ecs.PrivateIpSet{
+										{
+											PrivateIpAddress: privateIP,
+										},
+									},
+								},
+							},
+						},
+					},
+					Tags: ecs.TagsInDescribeInstances{
+						Tag: []ecs.Tag{
+							{
+								TagKey:   clusterFilterName,
+								TagValue: stubMasterMachineName,
+								Key:      clusterFilterName,
+								Value:    stubMasterMachineName,
+							},
+							{
+								Key:      clusterOwnedKey,
+								Value:    clusterOwnedValue,
+								TagKey:   clusterOwnedKey,
+								TagValue: clusterOwnedValue,
+							},
+							{
+								Key:      clusterFilterKeyPrefix + stubClusterID,
+								Value:    clusterFilterValue,
+								TagKey:   clusterFilterKeyPrefix + stubClusterID,
+								TagValue: clusterFilterValue,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func stubDescribeImagesResponse() *ecs.DescribeImagesResponse {
+	return &ecs.DescribeImagesResponse{
+		Images: ecs.Images{
+			Image: []ecs.Image{
+				{
+					ImageId: stubImageID,
+					Status:  EcsImageStatusAvailable,
+				},
+			},
+		},
+	}
+}
+
+func stubDescribeVSwitchesResponse() *vpc.DescribeVSwitchesResponse {
+	return &vpc.DescribeVSwitchesResponse{
+		VSwitches: vpc.VSwitches{
+			VSwitch: []vpc.VSwitch{
+				{
+					VSwitchId: stubVSwitchID,
+				},
+			},
+		},
+	}
+}
+
+func stubListResourceGroupsResponse() *resourcemanager.ListResourceGroupsResponse {
+	return &resourcemanager.ListResourceGroupsResponse{
+		ResourceGroups: resourcemanager.ResourceGroups{
+			ResourceGroup: []resourcemanager.ResourceGroup{
+				{
+					Id:   stubResourceGroupID,
+					Name: stubResourceGroupName,
+				},
+			},
+		},
+	}
+}
+
+func stubDescribeSecurityGroupsResponse() *ecs.DescribeSecurityGroupsResponse {
+	return &ecs.DescribeSecurityGroupsResponse{
+		SecurityGroups: ecs.SecurityGroups{
+			SecurityGroup: []ecs.SecurityGroup{
+				{
+					SecurityGroupId: stubSecurityGroupID,
+				},
+			},
+		},
+	}
 }
