@@ -621,8 +621,8 @@ func NewClient(ctrlRuntimeClient client.Client, secretName, namespace, regionID 
 	}, nil
 }
 
-//Init alibabacloud configuration
-//https://github.com/aliyun/alibaba-cloud-sdk-go/blob/master/sdk/auth/credentials/providers/configuration.go
+// Init alibabacloud configuration
+// https://github.com/aliyun/alibaba-cloud-sdk-go/blob/master/sdk/auth/credentials/providers/configuration.go
 func getCredentialFromSecret(ctrlRuntimeClient client.Client, secretName, namespace string, configManagedClient client.Client) (auth.Credential, error) {
 	if secretName == "" {
 		return nil, fmt.Errorf("secret name is empty")
