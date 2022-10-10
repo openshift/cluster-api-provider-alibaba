@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -12,6 +13,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
 	"k8s.io/kubectl/pkg/drain"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -21,6 +23,11 @@ import (
 	machinev1 "github.com/openshift/api/machine/v1beta1"
 
 	"github.com/openshift/machine-api-operator/pkg/util/conditions"
+)
+
+const (
+	nodeControlPlaneLabel = "node-role.kubernetes.io/control-plane"
+	nodeMasterLabel       = "node-role.kubernetes.io/master"
 )
 
 // DrainController performs pods eviction for deleting node
@@ -41,6 +48,19 @@ func newDrainController(mgr manager.Manager) reconcile.Reconciler {
 		scheme:        mgr.GetScheme(),
 	}
 	return d
+}
+
+// newDrainRateLimiter is based on the workqueue.DefaultControllerRateLimiter.
+// The default rate limiter used by controller-runtime has a base delay of 5 milliseconds.
+// As we know drains are a slower operation then traditional reconciles, we start with a
+// larger base delay to allow the pods time for graceful shutdown.
+// We cap out at 1000 seconds as with the default queue.
+func newDrainRateLimiter() workqueue.RateLimiter {
+	return workqueue.NewMaxOfRateLimiter(
+		workqueue.NewItemExponentialFailureRateLimiter(5*time.Second, 1000*time.Second),
+		// 10 qps, 100 bucket size.  This is only for retry speed and its only the overall factor (not per item)
+		&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(10), 100)},
+	)
 }
 
 func (d *machineDrainController) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -114,6 +134,10 @@ func (d *machineDrainController) drainNode(ctx context.Context, machine *machine
 		return fmt.Errorf("unable to get node %q: %v", machine.Status.NodeRef.Name, err)
 	}
 
+	if err := d.isDrainAllowed(ctx, node); err != nil {
+		return fmt.Errorf("drain not permitted: %w", err)
+	}
+
 	drainer := &drain.Helper{
 		Ctx:                 ctx,
 		Client:              kubeClient,
@@ -152,13 +176,56 @@ func (d *machineDrainController) drainNode(ctx context.Context, machine *machine
 	}
 
 	if err := drain.RunNodeDrain(drainer, node.Name); err != nil {
-		// Machine still tries to terminate after drain failure
 		klog.Warningf("drain failed for machine %q: %v", machine.Name, err)
-		return &RequeueAfterError{RequeueAfter: 20 * time.Second}
+
+		// Make sure we return a regular error to take advantage of exponential backoff.
+		// This will allow certain pods that need to finish work (eg static
+		// installer pods) to complete even when being drained.
+		// If we never allow the pods to complete, this can cause a deadlock between the
+		// drain controller and installer pods.
+		return err
 	}
 
 	klog.Infof("drain successful for machine %q", machine.Name)
 	d.eventRecorder.Eventf(machine, corev1.EventTypeNormal, "Deleted", "Node %q drained", node.Name)
 
 	return nil
+}
+
+// isDrainAllowed checks whether the drain is permitted at this time.
+// It checks the following:
+// - Is the node cordoned, if so allow draining to complete any previous attempt to drain.
+// - Is the node a control plane node, if so, only allow draining if no other control plane node is already being drained.
+func (d *machineDrainController) isDrainAllowed(ctx context.Context, node *corev1.Node) error {
+	if node.Spec.Unschedulable {
+		// If the node has already been cordoned, continue to drain.
+		return nil
+	}
+
+	if !isControlPlaneNode(*node) {
+		// We always allow draining of worker nodes.
+		return nil
+	}
+
+	nodes := &corev1.NodeList{}
+	if err := d.Client.List(ctx, nodes); err != nil {
+		return fmt.Errorf("could not list control plane nodes: %v", err)
+	}
+
+	for _, otherNode := range nodes.Items {
+		if isControlPlaneNode(otherNode) && otherNode.Spec.Unschedulable {
+			klog.Warningf("Drain not permitted for node %q: found other control plane node (%s) already cordoned: other node may be being drained, do not continue until the other node is removed", node.Name, otherNode.Name)
+			return &RequeueAfterError{RequeueAfter: 20 * time.Second}
+		}
+	}
+
+	return nil
+}
+
+// isControlPlaneNode checks if the Node is labelled as a control plane node.
+func isControlPlaneNode(node corev1.Node) bool {
+	_, controlPlane := node.Labels[nodeControlPlaneLabel]
+	_, master := node.Labels[nodeMasterLabel]
+
+	return controlPlane || master
 }

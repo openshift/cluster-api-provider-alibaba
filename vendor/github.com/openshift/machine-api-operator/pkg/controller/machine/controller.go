@@ -103,7 +103,10 @@ func AddWithActuator(mgr manager.Manager, actuator Actuator) error {
 	if err := add(mgr, newReconciler(mgr, actuator), "machine-controller"); err != nil {
 		return err
 	}
-	if err := add(mgr, newDrainController(mgr), "machine-drain-controller"); err != nil {
+	if err := addWithOpts(mgr, controller.Options{
+		Reconciler:  newDrainController(mgr),
+		RateLimiter: newDrainRateLimiter(),
+	}, "machine-drain-controller"); err != nil {
 		return err
 	}
 	return nil
@@ -130,8 +133,13 @@ func stringPointerDeref(stringPointer *string) string {
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler, controllerName string) error {
+	return addWithOpts(mgr, controller.Options{Reconciler: r}, controllerName)
+}
+
+// add adds a new Controller to mgr with r as the reconcile.Reconciler
+func addWithOpts(mgr manager.Manager, opts controller.Options, controllerName string) error {
 	// Create a new controller
-	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
+	c, err := controller.New(controllerName, mgr, opts)
 	if err != nil {
 		return err
 	}
@@ -422,8 +430,11 @@ func isInvalidMachineConfigurationError(err error) bool {
 // Because the conditions are set on the machine outside of this function, we must pass the original state of the
 // machine conditions so that the diff can be calculated properly within this function.
 func (r *ReconcileMachine) updateStatus(ctx context.Context, machine *machinev1.Machine, phase string, failureCause error, originalConditions []machinev1.Condition) error {
+	phaseChanged := false
 	if stringPointerDeref(machine.Status.Phase) != phase {
 		klog.V(3).Infof("%v: going into phase %q", machine.GetName(), phase)
+
+		phaseChanged = true
 	}
 
 	// Ensure the lifecycle hook conditions are accurate whenever the status is updated
@@ -487,8 +498,10 @@ func (r *ReconcileMachine) updateStatus(ctx context.Context, machine *machinev1.
 	}
 
 	// Update the metric after everything else has succeeded to prevent duplicate
-	// entries when there are failures
-	if phase != phaseDeleting {
+	// entries when there are failures.
+	// Only update when there is a change to the phase to avoid duplicating entries for
+	// individual machines.
+	if phaseChanged && phase != phaseDeleting {
 		// Apart from deleting, update the transition metric
 		// Deleting would always end up in the infinite bucket
 		timeElapsed := r.now().Sub(machine.GetCreationTimestamp().Time).Seconds()

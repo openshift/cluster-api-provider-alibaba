@@ -93,6 +93,7 @@ type CreateLoadBalancerRequest struct {
 	CloudType                    string           `position:"Query" name:"CloudType"`
 	Duration                     requests.Integer `position:"Query" name:"Duration"`
 	AddressType                  string           `position:"Query" name:"AddressType"`
+	InstanceChargeType           string           `position:"Query" name:"InstanceChargeType"`
 	DeleteProtection             string           `position:"Query" name:"DeleteProtection"`
 	AutoPay                      requests.Boolean `position:"Query" name:"AutoPay"`
 	Address                      string           `position:"Query" name:"Address"`
@@ -126,7 +127,7 @@ func CreateCreateLoadBalancerRequest() (request *CreateLoadBalancerRequest) {
 	request = &CreateLoadBalancerRequest{
 		RpcRequest: &requests.RpcRequest{},
 	}
-	request.InitWithApiInfo("Slb", "2014-05-15", "CreateLoadBalancer", "Slb", "openAPI")
+	request.InitWithApiInfo("Slb", "2014-05-15", "CreateLoadBalancer", "slb", "openAPI")
 	request.Method = requests.POST
 	return
 }
