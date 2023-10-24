@@ -33,7 +33,7 @@ REPO_PATH   ?= github.com/openshift/cluster-api-provider-alibaba
 LD_FLAGS    ?= -X $(REPO_PATH)/pkg/version.Raw=$(VERSION) $(shell hack/version.sh)  -extldflags "-static"
 MUTABLE_TAG ?= latest
 IMAGE        = origin-alibabacloud-machine-controllers
-BUILD_IMAGE ?= registry.ci.openshift.org/openshift/release:golang-1.17
+BUILD_IMAGE ?= registry.ci.openshift.org/openshift/release:golang-1.18
 
 
 # race tests need CGO_ENABLED, everything else should have it disabled
