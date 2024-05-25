@@ -1,6 +1,6 @@
 module github.com/openshift/cluster-api-provider-alibaba
 
-go 1.18
+go 1.22
 
 require (
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.1458
