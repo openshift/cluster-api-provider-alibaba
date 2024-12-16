@@ -28,7 +28,9 @@ endif
 GOARCH  ?= $(shell go env GOARCH)
 GOOS    ?= $(shell go env GOOS)
 
-VERSION     ?= $(shell git describe --tags --abbrev=7)
+# if we don't have a supplied version, try to use the commit tag
+OS_GIT_VERSION ?= $(shell git describe --tags --abbrev=7)
+VERSION     ?= $(OS_GIT_VERSION)
 REPO_PATH   ?= github.com/openshift/cluster-api-provider-alibaba
 LD_FLAGS    ?= -X $(REPO_PATH)/pkg/version.Raw=$(VERSION) $(shell hack/version.sh)  -extldflags "-static"
 MUTABLE_TAG ?= latest
