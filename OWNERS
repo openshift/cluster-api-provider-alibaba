@@ -7,13 +7,11 @@ approvers:
 - damdo
 - nrb
 reviewers:
-- JoelSpeed
 - RadekManak
 - damdo
-- elmiko
+- mdbooth
 - nrb
 - racheljpg
-- sub-mod
 - theobarberbany
 component: Cloud Compute
 subcomponent: Machine API Providers
