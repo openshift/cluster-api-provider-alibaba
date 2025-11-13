@@ -11,7 +11,7 @@ import (
 	resourcemanager "github.com/aliyun/alibaba-cloud-sdk-go/services/resourcemanager"
 	slb "github.com/aliyun/alibaba-cloud-sdk-go/services/slb"
 	vpc "github.com/aliyun/alibaba-cloud-sdk-go/services/vpc"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockClient is a mock of Client interface.

@@ -30,8 +30,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/golang/mock/gomock"
 	"github.com/openshift/cluster-api-provider-alibaba/pkg/client/mock"
+	"go.uber.org/mock/gomock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	machineapierrors "github.com/openshift/machine-api-operator/pkg/controller/machine"
