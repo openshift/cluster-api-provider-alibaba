@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"sync"
 
@@ -642,7 +641,7 @@ func fetchCredentialsIniFromSecret(secret *corev1.Secret) (auth.Credential, erro
 	if !ok {
 		return nil, fmt.Errorf("failed to fetch key 'credentials' in secret data")
 	}
-	f, err := ioutil.TempFile("", "alibaba-creds-*")
+	f, err := os.CreateTemp("", "alibaba-creds-*")
 	if err != nil {
 		return nil, err
 	}
