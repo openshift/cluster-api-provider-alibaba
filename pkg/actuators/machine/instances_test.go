@@ -21,11 +21,11 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/ecs"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/resourcemanager"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/vpc"
-	"github.com/golang/mock/gomock"
 	machinev1 "github.com/openshift/api/machine/v1"
 	machinev1beta1 "github.com/openshift/api/machine/v1beta1"
 	"github.com/openshift/cluster-api-provider-alibaba/pkg/client/mock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 	"reflect"
 	"testing"
 )

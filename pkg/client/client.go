@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-//go:generate go run ../../vendor/github.com/golang/mock/mockgen -source=./client.go -destination=./mock/client_mock.go -package=mock
+//go:generate go run ../../vendor/go.uber.org/mock/mockgen -source=./client.go -destination=./mock/client_mock.go -package=mock
 
 // AlibabaCloudClientBuilderFunc is function type for building alibabacloud client
 type AlibabaCloudClientBuilderFunc func(client client.Client, secretName, namespace, region string, configManagedClient client.Client) (Client, error)
