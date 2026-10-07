@@ -77,10 +77,13 @@ generate: gogen goimports
 gogen:
 	$(DOCKER_CMD) go generate ./pkg/... ./cmd/...
 
-.PHONY: test
-test: ## Run tests
+.PHONY: test test-fetch-ext-bins
+test: test-fetch-ext-bins ## Run tests
 	@echo -e "\033[32mTesting...\033[0m"
 	$(DOCKER_CMD) hack/ci-test.sh
+
+test-fetch-ext-bins:
+	$(DOCKER_CMD) hack/fetch-ext-bins_test.sh
 
 bin:
 	@mkdir $@

@@ -18,10 +18,26 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-REPO_ROOT=$(dirname "${BASH_SOURCE}")/..
+REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 
-cd $REPO_ROOT && \
-	source ./hack/fetch-ext-bins.sh && \
-	fetch_tools && \
-	setup_envs && \
-	make unit
+cd "$REPO_ROOT"
+# shellcheck source=hack/fetch-ext-bins.sh
+source ./hack/fetch-ext-bins.sh
+
+function cleanup_ci_envtest {
+	local test_status=$?
+	trap - EXIT
+
+	if ! cleanup_envtest_tools && [ "$test_status" -eq 0 ]; then
+		test_status=1
+	fi
+	exit "$test_status"
+}
+
+# fetch-ext-bins.sh is sourced and deliberately does not alter caller traps.
+# This caller owns the fetched assets until the unit tests have finished.
+trap cleanup_ci_envtest EXIT
+
+fetch_tools
+setup_envs
+make unit
